@@ -1,0 +1,11 @@
+package com.hostelhub.app
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+@HiltAndroidApp
+class HostelApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+    }
+}

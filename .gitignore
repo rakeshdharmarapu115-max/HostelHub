@@ -1,0 +1,52 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Backend
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.production
+backend/*.db
+backend/*.log
+# Environment and secrets
+*.env
+*.env.*
+database/database_config.env
+
+# Logs and generated files
+*.log
+.kotlin/
+.idea/
+.vscode/
+
+# Build files
+build/
+**/build/
+.gradle/
+# Duplicate nested project
+/hostel management/
+
+# IDE and generated files
+.idea/
+.vscode/
+.kotlin/
+.gradle/
+build/
+**/build/
+
+# Environment and secrets
+*.env
+*.env.*
+database/database_config.env
+
+# Logs
+*.log
+local.properties

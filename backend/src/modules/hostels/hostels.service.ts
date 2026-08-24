@@ -1,0 +1,298 @@
+import { prisma } from '../../config/prisma';
+import { HostelGenderType } from '../../types/enums';
+
+export class HostelsService {
+  async getHostels(filters?: {
+    city?: string;
+    gender?: string;
+    minRent?: number;
+    maxRent?: number;
+  }) {
+    const where: any = {};
+
+    if (filters?.city) {
+      where.city = { contains: filters.city, mode: 'insensitive' };
+    }
+
+    if (filters?.gender) {
+      where.genderType = filters.gender.toUpperCase() as HostelGenderType;
+    }
+
+    if (filters?.minRent !== undefined || filters?.maxRent !== undefined) {
+      where.baseMonthlyRent = {};
+      if (filters?.minRent !== undefined) where.baseMonthlyRent.gte = Number(filters.minRent);
+      if (filters?.maxRent !== undefined) where.baseMonthlyRent.lte = Number(filters.maxRent);
+    }
+
+    const hostels = await prisma.hostel.findMany({
+      where,
+      include: {
+        host: { select: { fullName: true, businessName: true, contactPhone: true, contactEmail: true } },
+        reviews: { orderBy: { createdAt: 'desc' }, take: 5 }
+      },
+      orderBy: { rating: 'desc' }
+    });
+
+    return hostels.map(h => this.mapHostel(h));
+  }
+
+  async getHostelById(id: string) {
+    const hostel = await prisma.hostel.findUnique({
+      where: { id },
+      include: {
+        host: true,
+        reviews: {
+          orderBy: { createdAt: 'desc' }
+        },
+        blocks: {
+          include: {
+            floors: {
+              include: {
+                rooms: {
+                  include: { beds: true }
+                }
+              }
+            }
+          }
+        },
+        rooms: {
+          include: { beds: true }
+        }
+      }
+    });
+
+    if (!hostel) {
+      throw { status: 404, message: `Hostel not found for ID: ${id}` };
+    }
+
+    return this.mapHostel(hostel);
+  }
+
+  async createHostel(data: {
+    hostId: string;
+    name: string;
+    address: string;
+    city: string;
+    state?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    description?: string;
+    genderType?: HostelGenderType;
+    amenities?: string[];
+    rules?: string[];
+    images?: string[];
+    totalRooms?: number;
+    totalBeds?: number;
+    baseMonthlyRent?: number;
+    cautionDeposit?: number;
+    contactEmail?: string;
+    contactPhone?: string;
+  }) {
+    const created = await prisma.hostel.create({
+      data: {
+        hostId: data.hostId,
+        name: data.name,
+        address: data.address,
+        city: data.city,
+        state: data.state || '',
+        postalCode: data.postalCode || '',
+        latitude: data.latitude || 0.0,
+        longitude: data.longitude || 0.0,
+        description: data.description,
+        genderType: data.genderType || HostelGenderType.COED,
+        amenities: Array.isArray(data.amenities) ? JSON.stringify(data.amenities) : (data.amenities || '[]'),
+        rules: Array.isArray(data.rules) ? JSON.stringify(data.rules) : (data.rules || '[]'),
+        images: Array.isArray(data.images) ? JSON.stringify(data.images) : (data.images || '[]'),
+        totalRooms: data.totalRooms || 0,
+        totalBeds: data.totalBeds || 0,
+        baseMonthlyRent: data.baseMonthlyRent || 0.0,
+        cautionDeposit: data.cautionDeposit || 0.0,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone
+      }
+    });
+
+    return this.mapHostel(created);
+  }
+
+  async updateHostel(id: string, data: Partial<any>) {
+    const updatePayload: any = { ...data };
+    if (data.amenities !== undefined) updatePayload.amenities = Array.isArray(data.amenities) ? JSON.stringify(data.amenities) : data.amenities;
+    if (data.rules !== undefined) updatePayload.rules = Array.isArray(data.rules) ? JSON.stringify(data.rules) : data.rules;
+    if (data.images !== undefined) updatePayload.images = Array.isArray(data.images) ? JSON.stringify(data.images) : data.images;
+
+    const updated = await prisma.hostel.update({
+      where: { id },
+      data: updatePayload
+    });
+
+    return this.mapHostel(updated);
+  }
+
+  async addHostelImages(id: string, newImages: string[]) {
+    const hostel = await prisma.hostel.findUnique({ where: { id } });
+    if (!hostel) {
+      throw { status: 404, message: `Hostel not found for ID: ${id}` };
+    }
+
+    let existingImages: string[] = [];
+    try {
+      existingImages = JSON.parse(hostel.images || '[]');
+    } catch {
+      existingImages = [];
+    }
+
+    const merged = Array.from(new Set([...existingImages, ...newImages]));
+
+    const updated = await prisma.hostel.update({
+      where: { id },
+      data: { images: JSON.stringify(merged) }
+    });
+
+    return this.mapHostel(updated);
+  }
+
+  async addReview(data: {
+    hostelId: string;
+    studentId: string;
+    studentName?: string;
+    rating: number;
+    comment?: string;
+    cleanliness?: number;
+    foodQuality?: number;
+    amenitiesRating?: number;
+  }) {
+    let student = await prisma.student.findFirst({
+      where: {
+        OR: [
+          { id: data.studentId },
+          { userId: data.studentId },
+          { rollNumber: data.studentId }
+        ]
+      }
+    });
+
+    const studentId = student?.id || data.studentId;
+    const studentName = student?.fullName || data.studentName || 'Resident Student';
+
+    return prisma.$transaction(async (tx) => {
+      const review = await tx.hostelReview.create({
+        data: {
+          hostelId: data.hostelId,
+          studentId,
+          studentName,
+          rating: Number(data.rating) || 5.0,
+          comment: data.comment || 'Great hostel with clean rooms and supportive management.',
+          cleanliness: Number(data.cleanliness) || 5.0,
+          foodQuality: Number(data.foodQuality) || 5.0,
+          amenitiesRating: Number(data.amenitiesRating) || 5.0
+        }
+      });
+
+      // Recalculate average rating
+      const allReviews = await tx.hostelReview.findMany({
+        where: { hostelId: data.hostelId }
+      });
+
+      const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+
+      await tx.hostel.update({
+        where: { id: data.hostelId },
+        data: {
+          rating: Math.round(avgRating * 10) / 10,
+          ratingCount: allReviews.length
+        }
+      });
+
+      return {
+        reviewId: review.id,
+        hostelId: review.hostelId,
+        studentId: review.studentId,
+        studentName: review.studentName,
+        rating: review.rating,
+        comment: review.comment,
+        cleanliness: review.cleanliness,
+        foodQuality: review.foodQuality,
+        amenitiesRating: review.amenitiesRating,
+        createdAt: review.createdAt.getTime(),
+        updatedHostelRating: Math.round(avgRating * 10) / 10,
+        totalReviews: allReviews.length
+      };
+    });
+  }
+
+  async getReviews(hostelId: string) {
+    const reviews = await prisma.hostelReview.findMany({
+      where: { hostelId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return reviews.map(r => ({
+      reviewId: r.id,
+      hostelId: r.hostelId,
+      studentId: r.studentId,
+      studentName: r.studentName,
+      rating: r.rating,
+      comment: r.comment,
+      cleanliness: r.cleanliness,
+      foodQuality: r.foodQuality,
+      amenitiesRating: r.amenitiesRating,
+      createdAt: r.createdAt.getTime()
+    }));
+  }
+
+  async deleteHostel(id: string) {
+    await prisma.hostel.delete({
+      where: { id }
+    });
+
+    return { success: true };
+  }
+
+  private mapHostel(h: any) {
+    const parseJsonArray = (val: any) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try { return JSON.parse(val); } catch { return []; }
+      }
+      return [];
+    };
+
+    return {
+      hostelId: h.id,
+      hostId: h.hostId,
+      name: h.name,
+      address: h.address,
+      city: h.city,
+      state: h.state || '',
+      postalCode: h.postalCode || '',
+      latitude: h.latitude || 0.0,
+      longitude: h.longitude || 0.0,
+      description: h.description || '',
+      genderType: h.genderType,
+      amenities: parseJsonArray(h.amenities),
+      rules: parseJsonArray(h.rules),
+      images: parseJsonArray(h.images),
+      totalRooms: h.totalRooms || 0,
+      totalBeds: h.totalBeds || 0,
+      occupiedBeds: h.occupiedBeds || 0,
+      baseMonthlyRent: h.baseMonthlyRent || 0.0,
+      cautionDeposit: h.cautionDeposit || 0.0,
+      rating: h.rating || 0.0,
+      ratingCount: h.ratingCount || 0,
+      contactEmail: h.contactEmail || '',
+      contactPhone: h.contactPhone || '',
+      createdAt: h.createdAt.getTime(),
+      reviews: h.reviews?.map((r: any) => ({
+        reviewId: r.id,
+        studentName: r.studentName,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt.getTime()
+      })) || [],
+      blocks: h.blocks,
+      rooms: h.rooms
+    };
+  }
+}

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hostelhub-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: hostel_admin
+      POSTGRES_PASSWORD: SecurePassword_2026!
+      POSTGRES_DB: hostelhub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hostel_admin -d hostelhub_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hostelhub-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hostel_admin:SecurePassword_2026!@postgres:5432/hostelhub_db?schema=public
+      JWT_SECRET: super_secret_jwt_access_token_key_change_in_production_2026
+      JWT_EXPIRES_IN: 7d
+      JWT_REFRESH_SECRET: super_secret_jwt_refresh_token_key_change_in_production_2026
+      JWT_REFRESH_EXPIRES_IN: 30d
+      BCRYPT_SALT_ROUNDS: 12
+      CORS_ORIGIN: "*"
+    ports:
+      - "5000:5000"
+
+volumes:
+  postgres_data:
