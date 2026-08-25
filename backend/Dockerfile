@@ -2,7 +2,7 @@
 # 1. Builder Stage
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
-
+RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
 
 # Install build dependencies
@@ -21,7 +21,7 @@ RUN npm run build
 # 2. Production Runner Stage
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS runner
-
+RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
 
 ENV NODE_ENV=production
