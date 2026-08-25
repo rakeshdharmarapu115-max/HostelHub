@@ -6,15 +6,11 @@ export const swaggerDocument = {
     description: 'Complete production-grade REST API backend for the HostelHub Hostel Management System'
   },
   servers: [
-    {
-      url: 'https://hostelhub-backend.onrender.com/api',
-      description: 'Cloud Production Server (Render)'
-    },
-    {
-      url: '/api',
-      description: 'Current Host / Cloud Gateway'
-    }
-  ],
+  {
+    url: 'https://hostelhub-yp73.onrender.com/api',
+    description: 'Cloud Production Server (Render)'
+  }
+],
   components: {
     securitySchemes: {
       bearerAuth: {
