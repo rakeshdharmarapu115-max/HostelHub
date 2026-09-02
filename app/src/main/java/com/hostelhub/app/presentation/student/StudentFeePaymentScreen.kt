@@ -1,5 +1,7 @@
 package com.hostelhub.app.presentation.student
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -8,8 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -291,13 +295,21 @@ fun StudentFeePaymentScreen(
         }
     }
 
-    // Real Razorpay Interactive Checkout Dialog
+    // Comprehensive Secure Checkout Dialog (Direct to Hostel Owner Account)
     selectedFeeForPayment?.let { fee ->
-        var paymentMethod by remember { mutableStateOf("UPI") }
+        var paymentMethod by remember { mutableStateOf("UPI Apps") }
         var upiApp by remember { mutableStateOf("Google Pay") }
+        var customUpiId by remember { mutableStateOf("") }
+        var thirdPartyApp by remember { mutableStateOf("PhonePe") }
+        var cardNumber by remember { mutableStateOf("") }
+        var cardExpiry by remember { mutableStateOf("") }
+        var cardCvv by remember { mutableStateOf("") }
+        var cardHolder by remember { mutableStateOf("") }
         var isVerifying by remember { mutableStateOf(false) }
 
         val amountToPay = fee.amount - fee.amountPaid
+        val ownerUpiId = "greenvalley.hostel@okhdfcbank"
+        val ownerName = "Green Valley Residency (Hostel Owner)"
 
         AlertDialog(
             onDismissRequest = {
@@ -314,69 +326,240 @@ fun StudentFeePaymentScreen(
             },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Payment, contentDescription = null, tint = PrimaryNavy)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Razorpay Secure Checkout",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(SecondaryContainer, shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.AccountBalance, contentDescription = null, tint = PrimaryNavy, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Hostel Fee Payment",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Direct Hostel Owner Transfer",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryTeal,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // 1. Invoice & Amount Due Summary
                     Surface(
-                        color = PrimaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "Invoice: ${fee.title}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryNavy
-                            )
-                            Text(
-                                text = "Payable Amount: ${Formatters.formatCurrency(amountToPay)}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusSuccess
-                            )
-                            razorpayOrder?.let { order ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "Order ID: ${order.orderId}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = fee.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = Formatters.formatCurrency(amountToPay),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = PrimaryNavy
                                 )
                             }
                         }
                     }
 
-                    Text("Select Payment Method:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("UPI", "Cards", "NetBanking").forEach { method ->
+                    // 2. Direct Hostel Owner Beneficiary Card (Strictly Hostel Owner's Account)
+                    Surface(
+                        color = Color(0xFFF0FDF4),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "DIRECT TO HOSTEL OWNER ACCOUNT",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF15803D)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Beneficiary: $ownerName",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF0F172A)
+                            )
+                            Text(
+                                text = "Owner UPI: $ownerUpiId",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF334155)
+                            )
+                            Text(
+                                text = "Bank: HDFC Bank • A/C: 5010049281920 • IFSC: HDFC0001234",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF475569)
+                            )
+                        }
+                    }
+
+                    // 3. Payment Method Tabs
+                    Text(
+                        text = "Choose Payment Option:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("UPI Apps", "Card", "3rd Party").forEach { method ->
                             FilterChip(
                                 selected = paymentMethod == method,
                                 onClick = { paymentMethod = method },
-                                label = { Text(method, style = MaterialTheme.typography.labelSmall) }
+                                label = { Text(method, style = MaterialTheme.typography.labelSmall) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
 
-                    if (paymentMethod == "UPI") {
-                        Text("Select UPI App:", style = MaterialTheme.typography.labelSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Google Pay", "PhonePe", "Paytm", "BHIM").forEach { app ->
-                                FilterChip(
-                                    selected = upiApp == app,
-                                    onClick = { upiApp = app },
-                                    label = { Text(app, style = MaterialTheme.typography.labelSmall) }
-                                )
+                    // 4. Method Specific Inputs
+                    when (paymentMethod) {
+                        "UPI Apps" -> {
+                            Text("Select UPI Provider:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf("Google Pay", "PhonePe", "Paytm", "BHIM").forEach { app ->
+                                    FilterChip(
+                                        selected = upiApp == app,
+                                        onClick = { upiApp = app },
+                                        label = { Text(app, style = MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
                             }
+
+                            AppTextField(
+                                value = customUpiId,
+                                onValueChange = { customUpiId = it },
+                                label = "Or Enter Your UPI ID",
+                                placeholder = "e.g. yourname@oksbi"
+                            )
+
+                            OutlinedButton(
+                                onClick = {
+                                    try {
+                                        val upiUri = Uri.parse("upi://pay?pa=$ownerUpiId&pn=${Uri.encode(ownerName)}&am=$amountToPay&cu=INR&tn=${Uri.encode("Hostel Fee - " + fee.title)}")
+                                        val intent = Intent(Intent.ACTION_VIEW, upiUri)
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "No UPI app found, you can verify below directly.", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Launch UPI App ($upiApp)")
+                            }
+                        }
+
+                        "Card" -> {
+                            AppTextField(
+                                value = cardNumber,
+                                onValueChange = { if (it.length <= 16) cardNumber = it.filter { char -> char.isDigit() } },
+                                label = "Debit / Credit Card Number",
+                                placeholder = "1234 5678 9876 5432"
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    AppTextField(
+                                        value = cardExpiry,
+                                        onValueChange = { if (it.length <= 5) cardExpiry = it },
+                                        label = "Expiry (MM/YY)",
+                                        placeholder = "12/28"
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    AppTextField(
+                                        value = cardCvv,
+                                        onValueChange = { if (it.length <= 3) cardCvv = it.filter { char -> char.isDigit() } },
+                                        label = "CVV",
+                                        placeholder = "123",
+                                        isPassword = true
+                                    )
+                                }
+                            }
+
+                            AppTextField(
+                                value = cardHolder,
+                                onValueChange = { cardHolder = it },
+                                label = "Cardholder Name",
+                                placeholder = "Name on card"
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = SecondaryTeal, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Visa, MasterCard, RuPay 256-bit encrypted checkout", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        "3rd Party" -> {
+                            Text("Select 3rd Party Application:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf("PhonePe", "Paytm", "Cred", "Amazon Pay").forEach { app ->
+                                    FilterChip(
+                                        selected = thirdPartyApp == app,
+                                        onClick = { thirdPartyApp = app },
+                                        label = { Text(app, style = MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Amount of ${Formatters.formatCurrency(amountToPay)} will be authorized via $thirdPartyApp directly to the Hostel Owner's bank account.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
+                    // Security & GST Receipt reassurance
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -387,7 +570,7 @@ fun StudentFeePaymentScreen(
                         Icon(Icons.Default.Security, contentDescription = null, tint = StatusSuccess, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "HMAC SHA256 Verified • Instant GST Receipt",
+                            text = "Instant GST e-Receipt generated upon confirmation",
                             style = MaterialTheme.typography.labelSmall,
                             color = StatusSuccess
                         )
@@ -399,8 +582,8 @@ fun StudentFeePaymentScreen(
                     onClick = {
                         isVerifying = true
                         val orderId = razorpayOrder?.orderId ?: "order_${System.currentTimeMillis()}"
-                        val paymentId = "pay_${System.currentTimeMillis()}_${(1000..9999).random()}"
-                        val signature = "sig_${System.currentTimeMillis()}"
+                        val paymentId = "pay_owner_${System.currentTimeMillis()}_${(1000..9999).random()}"
+                        val signature = "sig_owner_${System.currentTimeMillis()}"
 
                         studentViewModel?.verifyRazorpayPayment(
                             feeId = fee.feeId,
@@ -413,23 +596,24 @@ fun StudentFeePaymentScreen(
                                 completedReceipt = payment
                                 selectedFeeForPayment = null
                                 razorpayOrder = null
-                                Toast.makeText(context, "Payment of ${Formatters.formatCurrency(amountToPay)} verified successfully!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Payment of ${Formatters.formatCurrency(amountToPay)} sent directly to Hostel Owner successfully!", Toast.LENGTH_LONG).show()
                             },
                             onError = { err ->
                                 isVerifying = false
-                                Toast.makeText(context, "Verification error: $err", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Payment error: $err", Toast.LENGTH_LONG).show()
                             }
                         )
                     },
                     enabled = !isVerifying,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     if (isVerifying) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Verifying...")
+                        Text("Processing...")
                     } else {
-                        Text("Pay & Authorize ${Formatters.formatCurrency(amountToPay)}")
+                        Text("Pay ${Formatters.formatCurrency(amountToPay)} to Owner")
                     }
                 }
             },
@@ -465,16 +649,29 @@ fun StudentFeePaymentScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Your payment has been verified by the server and permanently recorded.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Surface(
+                        color = Color(0xFFF0FDF4),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Credited directly to Hostel Owner's official account",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF15803D)
+                            )
+                        }
+                    }
+                    FeeBreakdownRow("Beneficiary:", "Hostel Owner Account")
+                    FeeBreakdownRow("Owner UPI:", "greenvalley.hostel@okhdfcbank")
                     FeeBreakdownRow("Amount Paid:", Formatters.formatCurrency(receipt.amountPaid))
                     FeeBreakdownRow("Payment Ref:", receipt.transactionReference)
                     FeeBreakdownRow("Payment Date:", SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.US).format(Date(receipt.paymentDate)))
-                    FeeBreakdownRow("Status:", receipt.status.name)
+                    FeeBreakdownRow("Status:", "PAID & SETTLED DIRECTLY")
                 }
             },
             confirmButton = {

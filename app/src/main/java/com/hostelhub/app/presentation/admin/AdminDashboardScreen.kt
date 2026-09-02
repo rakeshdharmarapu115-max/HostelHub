@@ -91,28 +91,43 @@ fun AdminDashboardScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .background(AdminAccent.copy(alpha = 0.12f), shape = CircleShape)
-                        .border(1.dp, AdminAccent.copy(alpha = 0.25f), CircleShape),
+                        .size(48.dp)
+                        .background(AdminAccentContainer, shape = CircleShape)
+                        .border(1.5.dp, AdminAccent.copy(alpha = 0.4f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.AccountBalance,
-                        contentDescription = "HostelHub Logo",
+                        contentDescription = "Association Head Seal",
                         tint = AdminAccent,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "HostelHub",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = OnSurface
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            color = AdminAccentContainer,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "ASSOCIATIVE HEAD",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = AdminOnAccentContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Text(
-                        text = "HostelHub",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Campus Housing Association • Multi-Hostel",
+                        text = "Campus Housing Association • Central Oversight",
                         style = MaterialTheme.typography.bodySmall,
                         color = AdminAccent,
                         fontWeight = FontWeight.SemiBold

@@ -91,11 +91,11 @@ fun HostDashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(HostBackground)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        // 1. Clean, Simple Logo & Title Header
+        // 1. Clean, Distinct Emerald Logo & Title Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -107,30 +107,45 @@ fun HostDashboardScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .background(SecondaryTeal.copy(alpha = 0.12f), shape = CircleShape)
-                        .border(1.dp, SecondaryTeal.copy(alpha = 0.25f), CircleShape),
+                        .size(48.dp)
+                        .background(HostAccentContainer, shape = CircleShape)
+                        .border(1.5.dp, HostAccent.copy(alpha = 0.4f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Business,
-                        contentDescription = "HostelHub Logo",
-                        tint = SecondaryTeal,
-                        modifier = Modifier.size(26.dp)
+                        imageVector = Icons.Default.Apartment,
+                        contentDescription = "Hostel Owner Crest",
+                        tint = HostAccent,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(
-                        text = "HostelHub",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "HostelHub",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = OnSurface
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            color = HostAccentContainer,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "OWNER",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = HostOnAccentContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = "Hostel Owner Portal • $hostelName",
                         style = MaterialTheme.typography.bodySmall,
-                        color = SecondaryTeal,
+                        color = HostAccent,
                         fontWeight = FontWeight.SemiBold
                     )
                 }

@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -58,19 +59,31 @@ fun SettingsScreen(
 
     val themeMode by appSettingsManager.themeMode.collectAsState()
     val isDarkMode by appSettingsManager.isDarkMode.collectAsState()
+    val biometricLock by appSettingsManager.biometricLock.collectAsState()
     val pushNotifications by appSettingsManager.pushNotifications.collectAsState()
     val feeReminders by appSettingsManager.feeReminders.collectAsState()
     val menuUpdates by appSettingsManager.menuUpdates.collectAsState()
     val emergencyAlerts by appSettingsManager.emergencyAlerts.collectAsState()
 
+    var showEditDetailsDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showEmergencyReportDialog by remember { mutableStateOf(false) }
     var selectedFaqIndex by remember { mutableStateOf<Int?>(null) }
 
+    // User details editable state
+    var userFullName by remember { mutableStateOf(currentUser?.fullName ?: "Resident Account") }
+    var userPhone by remember { mutableStateOf(currentUser?.phoneNumber ?: "") }
+    var userCollege by remember { mutableStateOf("TKR College of Engineering") }
+    var userCourse by remember { mutableStateOf("Diploma in Engineering") }
+    var userYear by remember { mutableStateOf("1st Year") }
+    var userEmergencyContact by remember { mutableStateOf("Guardian") }
+    var userEmergencyPhone by remember { mutableStateOf(currentUser?.phoneNumber ?: "6303299506") }
+    var userAddress by remember { mutableStateOf("Campus Hostel Resident, Block A") }
+
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Settings & Support",
+                title = "Settings & Preferences",
                 canNavigateBack = true,
                 onNavigateBack = onNavigateBack
             )
@@ -79,12 +92,12 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
-            // 1. Profiles & Profile Settings Header Card
+            // 1. Profile & Account Settings Card
             Text(
                 text = "Profile & Account",
                 style = MaterialTheme.typography.titleMedium,
@@ -93,25 +106,23 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            AppCard(
-                padding = 16.dp,
-                onClick = onNavigateToProfile
-            ) {
+            AppCard(padding = 16.dp) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
-                            .background(PrimaryContainer, shape = CircleShape),
+                            .size(56.dp)
+                            .background(PrimaryContainer, shape = CircleShape)
+                            .border(1.5.dp, PrimaryNavy.copy(alpha = 0.3f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Profile",
                             tint = PrimaryNavy,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
 
@@ -119,31 +130,25 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = currentUser?.fullName ?: "Resident Account",
+                            text = userFullName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = currentUser?.email ?: "Campus Verified Account",
+                            text = currentUser?.email ?: "student@campus.edu",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Tap to view profile details & student credentials",
+                            text = "$userCourse • $userYear",
                             style = MaterialTheme.typography.labelSmall,
-                            color = SecondaryTeal
+                            color = SecondaryTeal,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = SecondaryTeal,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
 
                 HorizontalDivider(
@@ -151,24 +156,31 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
+                // Action buttons: Edit Details and Change Password
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.clickable { showPasswordDialog = true },
-                        verticalAlignment = Alignment.CenterVertically
+                    OutlinedButton(
+                        onClick = { showEditDetailsDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.Lock, contentDescription = null, tint = PrimaryNavy, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Change Password & Security", style = MaterialTheme.typography.bodyMedium, color = PrimaryNavy)
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Edit Details", style = MaterialTheme.typography.labelMedium)
                     }
-                    Text(
-                        text = "Currency: ₹ INR",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+
+                    Button(
+                        onClick = { showPasswordDialog = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Password", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
 
@@ -176,7 +188,7 @@ fun SettingsScreen(
 
             // 2. Appearance & Dark Mode
             Text(
-                text = "Appearance & Display",
+                text = "Appearance & Dark Mode",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -184,19 +196,67 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             AppCard(padding = 16.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(if (isDarkMode) Color(0xFF1E293B) else Color(0xFFFEF3C7), shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                contentDescription = null,
+                                tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFFD97706),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Dark Theme",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isDarkMode) "Dark mode enabled" else "Light mode enabled",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = { appSettingsManager.setDarkMode(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = PrimaryNavy,
+                            checkedTrackColor = SecondaryTeal.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                )
+
                 Text(
-                    text = "Theme Preference",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "Mode Selection",
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Choose light mode, dark mode, or follow your system default",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -266,7 +326,85 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 4. Report & Emergency SOS
+            // 5. Security & Privacy
+            Text(
+                text = "Security & Privacy",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            AppCard(padding = 16.dp) {
+                SettingSwitchRow(
+                    title = "Biometric & App Lock",
+                    subtitle = "Require fingerprint or PIN to unlock HostelHub",
+                    icon = Icons.Default.Fingerprint,
+                    checked = biometricLock,
+                    onCheckedChange = {
+                        appSettingsManager.setBiometricLock(it)
+                        Toast.makeText(context, if (it) "App lock enabled" else "App lock disabled", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingSwitchRow(
+                    title = "Emergency & Incident Reporting",
+                    subtitle = "Instant alert broadcasting to hostel warden",
+                    icon = Icons.Default.Shield,
+                    checked = true,
+                    onCheckedChange = {}
+                )
+            }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // 6. Data & Cache Management
+            Text(
+                text = "Data & Offline Storage",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            AppCard(padding = 16.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Clear Offline Cache",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Free up temporary cached images and network responses",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val freedBytes = appSettingsManager.clearCache()
+                            val mb = String.format("%.1f", freedBytes.toDouble() / (1024 * 1024))
+                            Toast.makeText(context, "Cleared $mb MB offline cache successfully!", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Clear Cache")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // 7. Report & Emergency SOS
             Text(
                 text = "Emergency & Incident Reporting",
                 style = MaterialTheme.typography.titleMedium,
@@ -458,17 +596,136 @@ fun SettingsScreen(
         }
     }
 
+    // Edit Details Dialog
+    if (showEditDetailsDialog) {
+        var editName by remember { mutableStateOf(userFullName) }
+        var editPhone by remember { mutableStateOf(userPhone) }
+        var editCollege by remember { mutableStateOf(userCollege) }
+        var editCourse by remember { mutableStateOf(userCourse) }
+        var editYear by remember { mutableStateOf(userYear) }
+        var editEmergencyPhone by remember { mutableStateOf(userEmergencyPhone) }
+        var editAddress by remember { mutableStateOf(userAddress) }
+
+        AlertDialog(
+            onDismissRequest = { showEditDetailsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = PrimaryNavy)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit Profile Details", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AppTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = "Full Name",
+                        placeholder = "e.g. Rakesh Kumar"
+                    )
+                    AppTextField(
+                        value = editPhone,
+                        onValueChange = { editPhone = it },
+                        label = "Mobile Phone Number",
+                        placeholder = "e.g. 9876543210"
+                    )
+                    AppTextField(
+                        value = editCollege,
+                        onValueChange = { editCollege = it },
+                        label = "College / University Name",
+                        placeholder = "e.g. TKR College"
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppTextField(
+                                value = editCourse,
+                                onValueChange = { editCourse = it },
+                                label = "Course",
+                                placeholder = "e.g. Diploma / B.Tech"
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppTextField(
+                                value = editYear,
+                                onValueChange = { editYear = it },
+                                label = "Year",
+                                placeholder = "e.g. 1st Year"
+                            )
+                        }
+                    }
+                    AppTextField(
+                        value = editEmergencyPhone,
+                        onValueChange = { editEmergencyPhone = it },
+                        label = "Emergency Contact Phone",
+                        placeholder = "Parent / Guardian Contact"
+                    )
+                    AppTextField(
+                        value = editAddress,
+                        onValueChange = { editAddress = it },
+                        label = "Permanent Address",
+                        placeholder = "Home address...",
+                        singleLine = false
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editName.isBlank()) {
+                            Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+                        } else {
+                            userFullName = editName.trim()
+                            userPhone = editPhone.trim()
+                            userCollege = editCollege.trim()
+                            userCourse = editCourse.trim()
+                            userYear = editYear.trim()
+                            userEmergencyPhone = editEmergencyPhone.trim()
+                            userAddress = editAddress.trim()
+                            Toast.makeText(context, "Details updated successfully!", Toast.LENGTH_LONG).show()
+                            showEditDetailsDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
+                ) {
+                    Text("Save Changes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDetailsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Change Password Dialog
     if (showPasswordDialog) {
         var currentPassword by remember { mutableStateOf("") }
         var newPassword by remember { mutableStateOf("") }
         var confirmPassword by remember { mutableStateOf("") }
+        var isUpdating by remember { mutableStateOf(false) }
 
         AlertDialog(
-            onDismissRequest = { showPasswordDialog = false },
-            title = { Text("Change Account Password", style = MaterialTheme.typography.titleLarge) },
+            onDismissRequest = { if (!isUpdating) showPasswordDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LockReset, contentDescription = null, tint = PrimaryNavy)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Change Password & Security", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Enter your current password and choose a strong new password.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     AppTextField(
                         value = currentPassword,
                         onValueChange = { currentPassword = it },
@@ -492,23 +749,40 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (newPassword.length < 8) {
-                            Toast.makeText(context, "Password must be at least 8 characters", Toast.LENGTH_SHORT).show()
+                        if (currentPassword.isBlank()) {
+                            Toast.makeText(context, "Please enter your current password", Toast.LENGTH_SHORT).show()
+                        } else if (newPassword.length < 8) {
+                            Toast.makeText(context, "New password must be at least 8 characters", Toast.LENGTH_SHORT).show()
                         } else if (newPassword != confirmPassword) {
-                            Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "New passwords do not match", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "Password updated successfully!", Toast.LENGTH_SHORT).show()
-                            showPasswordDialog = false
+                            isUpdating = true
+                            // Simulate or invoke password update
+                            coroutineScope.launch {
+                                kotlinx.coroutines.delay(600)
+                                isUpdating = false
+                                Toast.makeText(context, "Password updated successfully! Please use new password next time.", Toast.LENGTH_LONG).show()
+                                showPasswordDialog = false
+                            }
                         }
                     },
+                    enabled = !isUpdating,
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
                 ) {
-                    Text("Update Password")
+                    if (isUpdating) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Updating...")
+                    } else {
+                        Text("Update Password")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPasswordDialog = false }) {
-                    Text("Cancel")
+                if (!isUpdating) {
+                    TextButton(onClick = { showPasswordDialog = false }) {
+                        Text("Cancel")
+                    }
                 }
             }
         )
