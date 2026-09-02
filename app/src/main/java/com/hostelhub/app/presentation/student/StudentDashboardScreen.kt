@@ -109,7 +109,7 @@ fun StudentDashboardScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (studentName.isNotBlank()) "Student Portal • $studentName" else "Student Portal",
+                        text = if (studentName.isNotBlank()) "Student • $studentName" else "Student",
                         style = MaterialTheme.typography.bodySmall,
                         color = SecondaryTeal,
                         fontWeight = FontWeight.SemiBold
@@ -149,10 +149,10 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // 2. My Room & Bed Banner Card
+        // 2. Room & Bed Banner Card
         AppCard(
             backgroundColor = StudentHeroBg,
-            padding = 18.dp,
+            padding = 16.dp,
             onClick = onNavigateToRoom
         ) {
             Row(
@@ -160,29 +160,46 @@ fun StudentDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Allocated Accommodation",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (stats.roomNumber.isNotBlank()) "Room ${stats.roomNumber} • ${stats.bedNumber}" else "Room Allocated",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stats.hostelName.ifBlank { "Green Valley Residencies" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color.White.copy(alpha = 0.2f), shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MeetingRoom,
+                            contentDescription = "Room",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Room",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Text(
+                            text = if (stats.roomNumber.isNotBlank()) "${stats.roomNumber} • ${stats.bedNumber}" else "Allocated",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = stats.hostelName.ifBlank { "Green Valley Residencies" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
-                    text = "Room Info →",
+                    text = "Info",
                     statusType = BadgeStatusType.SUCCESS,
                     customBgColor = StudentBadgeBg,
                     customTextColor = StudentBadgeText
@@ -192,15 +209,15 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Key Metrics: Equal Sized Cards
+        // 3. Key Metrics: Fees & Complaints
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             EqualMetricCard(
-                title = "Fees & Dues",
+                title = "Fees",
                 value = if (stats.pendingFees > 0) Formatters.formatCurrency(stats.pendingFees) else "₹0.00",
-                subtitle = if (stats.pendingFees > 0) "Pending Payment" else "All Cleared",
+                subtitle = if (stats.pendingFees > 0) "Pending" else "All Cleared",
                 icon = Icons.Default.Payment,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -221,9 +238,9 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 4. Quick Actions Hub - Equal Sized Cards in 3-column Grid
+        // 4. Portal Navigation - Icon + Single-Word Title (Zero Subtitles)
         Text(
-            text = "Quick Portal Navigation",
+            text = "Portal",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -235,8 +252,7 @@ fun StudentDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             EqualQuickNavCard(
-                title = "Pay Fees",
-                subtitle = "Invoices & Dues",
+                title = "Fees",
                 icon = Icons.Default.Payment,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -244,8 +260,7 @@ fun StudentDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             EqualQuickNavCard(
-                title = "My Room",
-                subtitle = "Bed & Specs",
+                title = "Room",
                 icon = Icons.Default.MeetingRoom,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -253,8 +268,7 @@ fun StudentDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             EqualQuickNavCard(
-                title = "Mess Menu",
-                subtitle = "Daily Meals",
+                title = "Mess",
                 icon = Icons.Default.Restaurant,
                 iconTint = TertiaryAmber,
                 iconBg = TertiaryAmber.copy(alpha = 0.15f),
@@ -271,7 +285,6 @@ fun StudentDashboardScreen(
         ) {
             EqualQuickNavCard(
                 title = "Complaints",
-                subtitle = "File Ticket",
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 iconTint = MaterialTheme.colorScheme.error,
                 iconBg = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
@@ -280,7 +293,6 @@ fun StudentDashboardScreen(
             )
             EqualQuickNavCard(
                 title = "Notices",
-                subtitle = "Circulars",
                 icon = Icons.Default.Campaign,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -289,7 +301,6 @@ fun StudentDashboardScreen(
             )
             EqualQuickNavCard(
                 title = "Hostels",
-                subtitle = "Explore Catalog",
                 icon = Icons.Default.Apartment,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -300,20 +311,35 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 5. Today's Mess Food Menu Preview
+        // 5. Mess Menu
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Today's Mess Menu (${currentDayName.replaceFirstChar { it.uppercase() }})",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Mess",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Surface(
+                    color = SecondaryTeal.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = currentDayName.replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = SecondaryTeal,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
             TextButton(onClick = onNavigateToMenu) {
-                Text("Full Week →", color = SecondaryTeal, fontWeight = FontWeight.Bold)
+                Text("Week →", color = SecondaryTeal, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -342,7 +368,7 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 6. Help / Warden Support Card
+        // 6. Support
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
@@ -361,13 +387,13 @@ fun StudentDashboardScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Need Hostel Warden Assistance?",
+                        text = "Support",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "File a maintenance or support ticket anytime for prompt resolution.",
+                        text = "Warden Assistance & Maintenance",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -375,7 +401,7 @@ fun StudentDashboardScreen(
                 IconButton(onClick = onNavigateToComplaints) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Go to complaints",
+                        contentDescription = "Complaints",
                         tint = SecondaryTeal
                     )
                 }
@@ -397,7 +423,7 @@ private fun EqualMetricCard(
 ) {
     AppCard(
         onClick = onClick,
-        modifier = modifier.height(118.dp),
+        modifier = modifier.height(112.dp),
         padding = 14.dp
     ) {
         Column(
@@ -411,9 +437,9 @@ private fun EqualMetricCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box(
                     modifier = Modifier
@@ -444,7 +470,6 @@ private fun EqualMetricCard(
 @Composable
 private fun EqualQuickNavCard(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     iconTint: Color,
     iconBg: Color,
@@ -453,8 +478,8 @@ private fun EqualQuickNavCard(
 ) {
     AppCard(
         onClick = onClick,
-        modifier = modifier.height(115.dp),
-        padding = 10.dp
+        modifier = modifier.height(96.dp),
+        padding = 8.dp
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -463,7 +488,7 @@ private fun EqualQuickNavCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(42.dp)
                     .background(iconBg, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -471,21 +496,15 @@ private fun EqualQuickNavCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
         }

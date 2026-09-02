@@ -143,7 +143,7 @@ fun HostDashboardScreen(
                         }
                     }
                     Text(
-                        text = "Hostel Owner Portal • $hostelName",
+                        text = if (hostelName.isNotBlank()) "Owner • $hostelName" else "Owner",
                         style = MaterialTheme.typography.bodySmall,
                         color = HostAccent,
                         fontWeight = FontWeight.SemiBold
@@ -160,7 +160,7 @@ fun HostDashboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Campaign,
-                        contentDescription = "Broadcast",
+                        contentDescription = "Notices",
                         tint = HostOnAccentContainer,
                         modifier = Modifier.size(22.dp)
                     )
@@ -186,7 +186,7 @@ fun HostDashboardScreen(
         // 2. Real-Time Occupancy Summary Card
         AppCard(
             backgroundColor = HostHeroBg,
-            padding = 18.dp,
+            padding = 16.dp,
             onClick = onNavigateToRooms
         ) {
             Row(
@@ -194,29 +194,46 @@ fun HostDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Real-Time Occupancy Rate",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$occupancyRate% Occupied",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds Filled • ${stats.availableBeds} Vacant",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color.White.copy(alpha = 0.2f), shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MeetingRoom,
+                            contentDescription = "Rooms",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Occupancy",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Text(
+                            text = "$occupancyRate% Occupied",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds • ${stats.availableBeds} Vacant",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
-                    text = "Manage →",
+                    text = "Rooms",
                     statusType = BadgeStatusType.SUCCESS,
                     customBgColor = HostBadgeBg,
                     customTextColor = HostBadgeText
@@ -248,13 +265,13 @@ fun HostDashboardScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Hostel Showcase Photos",
+                            text = "Photos",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${hostel?.images?.size ?: 0} Photos in resident catalog",
+                            text = "${hostel?.images?.size ?: 0} Uploaded",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -269,7 +286,7 @@ fun HostDashboardScreen(
                 ) {
                     Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Photo", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("Add", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -328,15 +345,15 @@ fun HostDashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. Key Property Stats (No Duplications)
+        // 4. Key Property Stats
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             HostEqualMetricCard(
-                title = "Total Residents",
+                title = "Residents",
                 value = "${stats.occupiedBeds} Students",
-                subtitle = "Across ${stats.totalRooms} Rooms",
+                subtitle = "${stats.totalRooms} Rooms",
                 icon = Icons.Default.Group,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -344,9 +361,9 @@ fun HostDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             HostEqualMetricCard(
-                title = "Pending Dues",
+                title = "Dues",
                 value = if (stats.pendingFeeAmount > 0) Formatters.formatCurrencyNoDecimals(stats.pendingFeeAmount) else "₹0",
-                subtitle = "${stats.pendingFeeCount} Invoices Due",
+                subtitle = "${stats.pendingFeeCount} Due",
                 icon = Icons.Default.Payment,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -357,9 +374,9 @@ fun HostDashboardScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 5. Single Authoritative Management Controls Hub (Zero Duplication)
+        // 5. Controls - Icon + Single-Word Titles
         Text(
-            text = "Host Management Controls",
+            text = "Controls",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -371,8 +388,7 @@ fun HostDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             HostEqualActionCard(
-                title = "Rooms & Beds",
-                subtitle = "${stats.availableBeds} Vacant Beds",
+                title = "Rooms",
                 icon = Icons.Default.MeetingRoom,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -380,8 +396,7 @@ fun HostDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             HostEqualActionCard(
-                title = "Students Directory",
-                subtitle = "Residents & ID Activation",
+                title = "Students",
                 icon = Icons.Default.Group,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -397,8 +412,7 @@ fun HostDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             HostEqualActionCard(
-                title = "Food Menu",
-                subtitle = "Weekly Schedule",
+                title = "Mess",
                 icon = Icons.Default.Restaurant,
                 iconTint = TertiaryAmber,
                 iconBg = TertiaryAmber.copy(alpha = 0.15f),
@@ -406,8 +420,7 @@ fun HostDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             HostEqualActionCard(
-                title = "Complaint Desk",
-                subtitle = "${stats.pendingComplaints} Pending Tickets",
+                title = "Complaints",
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 iconTint = MaterialTheme.colorScheme.error,
                 iconBg = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
@@ -423,8 +436,7 @@ fun HostDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             HostEqualActionCard(
-                title = "Fees & Payments",
-                subtitle = "Invoices & History",
+                title = "Fees",
                 icon = Icons.Default.Payment,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -432,8 +444,7 @@ fun HostDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             HostEqualActionCard(
-                title = "Announcements",
-                subtitle = "Resident Broadcasts",
+                title = "Notices",
                 icon = Icons.Default.Campaign,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -449,8 +460,7 @@ fun HostDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             HostEqualActionCard(
-                title = "Daily Attendance",
-                subtitle = "${stats.todayPresent} Checked In",
+                title = "Attendance",
                 icon = Icons.Default.FactCheck,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -458,8 +468,7 @@ fun HostDashboardScreen(
                 modifier = Modifier.weight(1f)
             )
             HostEqualActionCard(
-                title = "Hostel Profile",
-                subtitle = "Info & Photos",
+                title = "Profile",
                 icon = Icons.Default.Business,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
@@ -500,9 +509,9 @@ private fun HostEqualMetricCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box(
                     modifier = Modifier
@@ -540,7 +549,6 @@ private fun HostEqualMetricCard(
 @Composable
 private fun HostEqualActionCard(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     iconTint: Color,
     iconBg: Color,
@@ -549,9 +557,9 @@ private fun HostEqualActionCard(
 ) {
     AppCard(
         modifier = modifier
-            .height(90.dp)
+            .height(72.dp)
             .clickable { onClick() },
-        padding = 12.dp
+        padding = 10.dp
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -565,28 +573,19 @@ private fun HostEqualActionCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+                    contentDescription = title,
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
         }
     }
 }

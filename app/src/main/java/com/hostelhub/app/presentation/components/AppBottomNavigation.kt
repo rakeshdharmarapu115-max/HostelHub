@@ -39,14 +39,14 @@ data class BottomNavItem(
 
 val StudentBottomNavItems = listOf(
     BottomNavItem("student_dashboard", "Home", Icons.Filled.Home, Icons.Outlined.Home),
-    BottomNavItem("student_my_room", "My Room", Icons.Filled.MeetingRoom, Icons.Outlined.MeetingRoom),
-    BottomNavItem("student_payments", "Payments", Icons.Filled.Payment, Icons.Outlined.Payment),
+    BottomNavItem("student_my_room", "Room", Icons.Filled.MeetingRoom, Icons.Outlined.MeetingRoom),
+    BottomNavItem("student_payments", "Fees", Icons.Filled.Payment, Icons.Outlined.Payment),
     BottomNavItem("student_complaints", "Complaints", Icons.Filled.Assignment, Icons.Outlined.Assignment),
     BottomNavItem("student_profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 )
 
 val HostBottomNavItems = listOf(
-    BottomNavItem("host_dashboard", "Dashboard", Icons.Filled.Home, Icons.Outlined.Home),
+    BottomNavItem("host_dashboard", "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem("host_rooms", "Rooms", Icons.Filled.MeetingRoom, Icons.Outlined.MeetingRoom),
     BottomNavItem("host_students", "Students", Icons.Filled.Group, Icons.Outlined.Group),
     BottomNavItem("host_complaints", "Complaints", Icons.Filled.Assignment, Icons.Outlined.Assignment),
@@ -54,7 +54,7 @@ val HostBottomNavItems = listOf(
 )
 
 val AdminBottomNavItems = listOf(
-    BottomNavItem("admin_dashboard", "Overview", Icons.Filled.Home, Icons.Outlined.Home),
+    BottomNavItem("admin_dashboard", "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem("admin_hostels", "Hostels", Icons.Filled.Business, Icons.Outlined.Business),
     BottomNavItem("admin_analytics", "Analytics", Icons.Filled.Assignment, Icons.Outlined.Assignment),
     BottomNavItem("admin_users", "Users", Icons.Filled.Group, Icons.Outlined.Group)

@@ -127,7 +127,7 @@ fun AdminDashboardScreen(
                         }
                     }
                     Text(
-                        text = "Campus Housing Association • Central Oversight",
+                        text = "Association",
                         style = MaterialTheme.typography.bodySmall,
                         color = AdminAccent,
                         fontWeight = FontWeight.SemiBold
@@ -144,7 +144,7 @@ fun AdminDashboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Campaign,
-                        contentDescription = "Broadcast",
+                        contentDescription = "Notices",
                         tint = AdminOnAccentContainer,
                         modifier = Modifier.size(22.dp)
                     )
@@ -167,10 +167,10 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // 2. Association-Wide Central Oversight Hero Card
+        // 2. Occupancy Hero Card
         AppCard(
             backgroundColor = AdminHeroBg,
-            padding = 20.dp,
+            padding = 16.dp,
             onClick = onNavigateToHostels
         ) {
             Row(
@@ -178,29 +178,46 @@ fun AdminDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Central Campus Housing Aggregate",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$occupancyPercent% Campus Occupancy",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds Filled • ${stats.totalHostels} Affiliated Properties",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color.White.copy(alpha = 0.2f), shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Apartment,
+                            contentDescription = "Hostels",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Occupancy",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Text(
+                            text = "$occupancyPercent% Campus Occupancy",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds • ${stats.totalHostels} Hostels",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
-                    text = "Inspect All →",
+                    text = "Hostels",
                     statusType = BadgeStatusType.SUCCESS,
                     customBgColor = AdminBadgeBg,
                     customTextColor = AdminBadgeText
@@ -216,18 +233,16 @@ fun AdminDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             MetricStatCard(
-                title = "Affiliated Hostels",
+                title = "Hostels",
                 value = "${stats.totalHostels} Hostels",
                 icon = Icons.Default.Business,
-                subtitle = "Registered & Verified",
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToHostels
             )
             MetricStatCard(
-                title = "Total Residents",
+                title = "Residents",
                 value = "${stats.totalStudents} Students",
                 icon = Icons.Default.Group,
-                subtitle = "+12% Growth YoY",
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToUsers
             )
@@ -240,18 +255,16 @@ fun AdminDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             MetricStatCard(
-                title = "Total Revenue (₹)",
+                title = "Revenue",
                 value = Formatters.formatCurrencyNoDecimals(stats.totalRevenue),
                 icon = Icons.Default.Assessment,
-                subtitle = "Fee Collections",
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToAnalytics
             )
             MetricStatCard(
-                title = "Hostel Issues",
+                title = "Issues",
                 value = "${stats.pendingComplaints} Pending",
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                subtitle = "Active Grievance Queue",
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToAnalytics
             )
@@ -259,20 +272,20 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 4. Multi-Hostel Activity & Monitoring (Hostels List with Live Metrics)
+        // 4. Hostels
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Affiliated Hostels & Resident Strength",
+                text = "Hostels",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "View Directory →",
+                text = "All →",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = AdminOnAccentContainer,
@@ -310,9 +323,9 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 5. Student Distribution & Growth Across Hostels
+        // 5. Enrollment
         Text(
-            text = "Student Distribution & Enrollment Growth",
+            text = "Enrollment",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -348,8 +361,7 @@ fun AdminDashboardScreen(
                             Text(
                                 text = "$studentCount Students ($displayPercent%)",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = AdminOnAccentContainer
+                                color = MaterialTheme.colorScheme.outline
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
@@ -397,14 +409,14 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 6. Centralized Cross-Hostel Grievances Oversight
+        // 6. Complaints
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Hostel Issues & Grievance Queue",
+                text = "Complaints",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -458,44 +470,68 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 7. Directives Broadcast to Hostel Owners & Students
+        // 7. Notices
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Association Directives & Circulars",
+                text = "Notices",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "All Circulars →",
+                text = "New →",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = AdminOnAccentContainer,
-                modifier = Modifier.clickable { onNavigateToAnnouncements() }
+                modifier = Modifier.clickable { showBroadcastModal = true }
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         AppCard(padding = 16.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = { showBroadcastModal = true },
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AdminAccent),
-                    shape = RoundedCornerShape(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Campaign,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("📢 Publish Directive to Hostel Owners", fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Campaign,
+                            contentDescription = null,
+                            tint = AdminAccent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Emergency & Policy Broadcasts",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Cross-Campus Push Broadcasts",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = { showBroadcastModal = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = AdminAccent),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Broadcast", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 if (announcements.isNotEmpty()) {
@@ -542,9 +578,9 @@ fun AdminDashboardScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 8. Administrative Governance Controls Grid
+        // 8. Governance
         Text(
-            text = "Governance Controls",
+            text = "Governance",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -556,15 +592,13 @@ fun AdminDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AdminQuickAction(
-                title = "Hostels Registry",
-                subtitle = "Manage Properties",
+                title = "Hostels",
                 icon = Icons.Default.Business,
                 onClick = onNavigateToHostels,
                 modifier = Modifier.weight(1f)
             )
             AdminQuickAction(
-                title = "Residents & Staff",
-                subtitle = "User Accounts",
+                title = "Users",
                 icon = Icons.Default.Group,
                 onClick = onNavigateToUsers,
                 modifier = Modifier.weight(1f)
@@ -578,15 +612,13 @@ fun AdminDashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AdminQuickAction(
-                title = "Campus Analytics",
-                subtitle = "Yields & Occupancy (₹)",
+                title = "Analytics",
                 icon = Icons.Default.Assessment,
                 onClick = onNavigateToAnalytics,
                 modifier = Modifier.weight(1f)
             )
             AdminQuickAction(
-                title = "Directives Feed",
-                subtitle = "Global Broadcasts",
+                title = "Notices",
                 icon = Icons.Default.Campaign,
                 onClick = onNavigateToAnnouncements,
                 modifier = Modifier.weight(1f)
@@ -968,23 +1000,22 @@ private fun HostelSpecRow(label: String, value: String) {
 @Composable
 private fun AdminQuickAction(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     AppCard(
         onClick = onClick,
-        modifier = modifier.height(105.dp),
-        padding = 12.dp
+        modifier = modifier.height(72.dp),
+        padding = 10.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .background(AdminAccentContainer, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -996,20 +1027,13 @@ private fun AdminQuickAction(
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
         }
     }
 }
