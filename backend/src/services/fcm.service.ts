@@ -41,6 +41,27 @@ export class FcmService {
       return { delivered: false, notificationId: '' };
     }
 
+    // Inspect user settings
+    const usersService = new (await import('../modules/users/users.service')).UsersService();
+    const userSettings = await usersService.getUserSettings(user.id);
+
+    // Suppress notifications if user preferences disallow it
+    const isUrgent = payload.type === 'EMERGENCY' || payload.data?.priority === 'URGENT';
+    if (!isUrgent) {
+      if (!userSettings.pushNotifications) {
+        console.log(`[FCM] Notification suppressed for ${user.fullName}: user disabled all push notifications`);
+        return { delivered: false, notificationId: '' };
+      }
+      if (payload.type === 'PAYMENT_DUE' && !userSettings.feeReminders) {
+        console.log(`[FCM] Fee reminder suppressed for ${user.fullName}: user disabled fee reminders`);
+        return { delivered: false, notificationId: '' };
+      }
+      if (payload.type === 'FOOD_MENU' && !userSettings.menuAlerts) {
+        console.log(`[FCM] Food menu notification suppressed for ${user.fullName}: user disabled mess alerts`);
+        return { delivered: false, notificationId: '' };
+      }
+    }
+
     // 1. Create database notification record
     const dbNotification = await prisma.notification.create({
       data: {

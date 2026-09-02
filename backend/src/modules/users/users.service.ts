@@ -90,4 +90,49 @@ export class UsersService {
       isActive: updated.isActive
     };
   }
+
+  // Central User Preferences & Settings Store
+  private static userSettingsStore = new Map<string, {
+    userId: string;
+    theme: string;
+    pushNotifications: boolean;
+    feeReminders: boolean;
+    menuAlerts: boolean;
+    emergencyAlerts: boolean;
+    updatedAt: number;
+  }>();
+
+  async getUserSettings(userId: string) {
+    const existing = UsersService.userSettingsStore.get(userId);
+    if (existing) return existing;
+
+    const defaults = {
+      userId,
+      theme: 'SYSTEM_DEFAULT',
+      pushNotifications: true,
+      feeReminders: true,
+      menuAlerts: true,
+      emergencyAlerts: true,
+      updatedAt: Date.now()
+    };
+    UsersService.userSettingsStore.set(userId, defaults);
+    return defaults;
+  }
+
+  async updateUserSettings(userId: string, data: Partial<{
+    theme: string;
+    pushNotifications: boolean;
+    feeReminders: boolean;
+    menuAlerts: boolean;
+    emergencyAlerts: boolean;
+  }>) {
+    const current = await this.getUserSettings(userId);
+    const updated = {
+      ...current,
+      ...data,
+      updatedAt: Date.now()
+    };
+    UsersService.userSettingsStore.set(userId, updated);
+    return updated;
+  }
 }

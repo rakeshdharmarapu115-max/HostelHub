@@ -56,10 +56,22 @@ class AppSettingsManager @Inject constructor(
     private val _biometricLock = MutableStateFlow(prefs.getBoolean(KEY_BIOMETRIC_LOCK, false))
     val biometricLock: StateFlow<Boolean> = _biometricLock.asStateFlow()
 
+    private var activeUserId: String? = null
+
+    fun setUserScope(userId: String?) {
+        activeUserId = userId
+        val userPrefix = if (!userId.isNullOrBlank()) "${userId}_" else ""
+
+        _pushNotifications.value = prefs.getBoolean("${userPrefix}$KEY_PUSH_NOTIFICATIONS", true)
+        _feeReminders.value = prefs.getBoolean("${userPrefix}$KEY_FEE_REMINDERS", true)
+        _menuUpdates.value = prefs.getBoolean("${userPrefix}$KEY_MENU_UPDATES", true)
+        _emergencyAlerts.value = prefs.getBoolean("${userPrefix}$KEY_EMERGENCY_ALERTS", true)
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
         _themeMode.value = mode
-        _isDarkMode.value = mode == ThemeMode.DARK
+        _isDarkMode.value = (mode == ThemeMode.DARK)
     }
 
     fun setDarkMode(enabled: Boolean) {
@@ -72,22 +84,26 @@ class AppSettingsManager @Inject constructor(
     }
 
     fun setPushNotifications(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_PUSH_NOTIFICATIONS, enabled).apply()
+        val userPrefix = if (!activeUserId.isNullOrBlank()) "${activeUserId}_" else ""
+        prefs.edit().putBoolean("${userPrefix}$KEY_PUSH_NOTIFICATIONS", enabled).apply()
         _pushNotifications.value = enabled
     }
 
     fun setFeeReminders(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_FEE_REMINDERS, enabled).apply()
+        val userPrefix = if (!activeUserId.isNullOrBlank()) "${activeUserId}_" else ""
+        prefs.edit().putBoolean("${userPrefix}$KEY_FEE_REMINDERS", enabled).apply()
         _feeReminders.value = enabled
     }
 
     fun setMenuUpdates(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_MENU_UPDATES, enabled).apply()
+        val userPrefix = if (!activeUserId.isNullOrBlank()) "${activeUserId}_" else ""
+        prefs.edit().putBoolean("${userPrefix}$KEY_MENU_UPDATES", enabled).apply()
         _menuUpdates.value = enabled
     }
 
     fun setEmergencyAlerts(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_EMERGENCY_ALERTS, enabled).apply()
+        val userPrefix = if (!activeUserId.isNullOrBlank()) "${activeUserId}_" else ""
+        prefs.edit().putBoolean("${userPrefix}$KEY_EMERGENCY_ALERTS", enabled).apply()
         _emergencyAlerts.value = enabled
     }
 

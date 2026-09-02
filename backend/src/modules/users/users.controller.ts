@@ -45,4 +45,32 @@ export class UsersController {
       next(error);
     }
   }
+
+  async getMySettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?.userId;
+      if (!userId) {
+        sendError(res, 'Unauthorized', 401);
+        return;
+      }
+      const settings = await usersService.getUserSettings(userId);
+      sendSuccess(res, 'Settings retrieved successfully', settings);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateMySettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?.userId;
+      if (!userId) {
+        sendError(res, 'Unauthorized', 401);
+        return;
+      }
+      const settings = await usersService.updateUserSettings(userId, req.body);
+      sendSuccess(res, 'Settings updated successfully', settings);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

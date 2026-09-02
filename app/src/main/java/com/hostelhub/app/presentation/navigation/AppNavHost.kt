@@ -364,6 +364,7 @@ fun AppNavHost(
                     val currentUser by authViewModel.currentUser.collectAsState()
                     SettingsScreen(
                         currentUser = currentUser,
+                        studentViewModel = studentViewModel,
                         onNavigateToProfile = {
                             when (currentUser?.role) {
                                 UserRole.HOST -> navController.navigate(Screen.HostProfile.route)
