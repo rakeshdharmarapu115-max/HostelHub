@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     fun getCurrentUser(): Flow<User?>
     suspend fun login(email: String, password: String, role: UserRole): Resource<User>
+    suspend fun validateStudentId(studentId: String): Resource<com.hostelhub.app.data.remote.dto.ValidateStudentIdResponseDto>
+    suspend fun activateStudent(studentId: String, emailOrPhone: String, password: String): Resource<User>
+    suspend fun forgotPassword(identifier: String): Resource<com.hostelhub.app.data.remote.dto.ForgotPasswordResponseDto>
+    suspend fun resetPassword(identifier: String, otp: String, newPassword: String): Resource<Unit>
     suspend fun registerStudent(student: Student, password: String): Resource<User>
     suspend fun registerHost(host: Host, password: String): Resource<User>
     suspend fun registerAdmin(admin: Admin, password: String): Resource<User>
@@ -21,16 +25,32 @@ interface StudentRepository {
     fun getResidentsByHostel(hostelId: String): Flow<Resource<List<Student>>>
     fun getAllStudents(): Flow<Resource<List<Student>>>
     suspend fun deleteStudent(studentId: String): Resource<Unit>
+    suspend fun generateStudentId(): Resource<String>
+    suspend fun createStudentByAdmin(student: Student, password: String): Resource<Student>
+    suspend fun deallocateStudent(studentId: String, remarks: String = ""): Resource<Student>
     fun getStudentDashboardStats(studentId: String): Flow<Resource<StudentDashboardStats>>
 }
 
 interface HostelRepository {
     fun getHostels(): Flow<Resource<List<Hostel>>>
     fun getHostelById(hostelId: String): Flow<Resource<Hostel>>
+    fun searchNearbyHostels(
+        lat: Double? = null,
+        lng: Double? = null,
+        radius: Double? = null,
+        city: String? = null,
+        query: String? = null
+    ): Flow<Resource<List<Hostel>>>
+    suspend fun createHostel(hostel: Hostel): Resource<Hostel>
     suspend fun updateHostel(hostel: Hostel): Resource<Unit>
-    fun getHostDashboardStats(hostelId: String): Flow<Resource<HostDashboardStats>>
-    fun getAdminDashboardStats(): Flow<Resource<AdminDashboardStats>>
-    fun getHostelReviews(hostelId: String): Flow<Resource<List<HostelReview>>>
+    suspend fun updateHostelLocation(
+        hostelId: String,
+        latitude: Double,
+        longitude: Double,
+        address: String,
+        city: String
+    ): Resource<Hostel>
+    suspend fun addHostelImages(hostelId: String, images: List<String>): Resource<Hostel>
     suspend fun submitReview(
         hostelId: String,
         studentId: String? = null,
@@ -41,7 +61,9 @@ interface HostelRepository {
         foodQuality: Double = 5.0,
         amenitiesRating: Double = 5.0
     ): Resource<HostelReview>
-    suspend fun addHostelImages(hostelId: String, images: List<String>): Resource<Hostel>
+    fun getHostelReviews(hostelId: String): Flow<Resource<List<HostelReview>>>
+    fun getHostDashboardStats(hostelId: String): Flow<Resource<HostDashboardStats>>
+    fun getAdminDashboardStats(): Flow<Resource<AdminDashboardStats>>
 }
 
 interface RoomRepository {
@@ -60,6 +82,10 @@ interface FeePaymentRepository {
     fun getAllFees(): Flow<Resource<List<Fee>>>
     fun getPaymentsForStudent(studentId: String): Flow<Resource<List<Payment>>>
     fun getPaymentsForHostel(hostelId: String): Flow<Resource<List<Payment>>>
+    fun getTransactionHistory(): Flow<Resource<List<Payment>>>
+    suspend fun createRazorpayOrder(feeId: String, amount: Double?): Resource<com.hostelhub.app.data.remote.dto.RazorpayOrderResponseDto>
+    suspend fun verifyRazorpayPayment(feeId: String, razorpayOrderId: String, razorpayPaymentId: String, razorpaySignature: String?, amountPaid: Double?): Resource<Payment>
+    suspend fun recordPaymentFailure(feeId: String, razorpayOrderId: String?, razorpayPaymentId: String?, errorMessage: String?): Resource<Payment>
     suspend fun recordPayment(payment: Payment): Resource<Payment>
     suspend fun createFee(fee: Fee): Resource<Fee>
 }

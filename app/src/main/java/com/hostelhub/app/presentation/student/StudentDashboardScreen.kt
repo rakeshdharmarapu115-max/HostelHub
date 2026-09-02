@@ -1,6 +1,7 @@
 package com.hostelhub.app.presentation.student
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.hostelhub.app.domain.model.StudentDashboardStats
 import com.hostelhub.app.presentation.components.AppCard
 import com.hostelhub.app.presentation.components.BadgeStatusType
-import com.hostelhub.app.presentation.components.MetricStatCard
 import com.hostelhub.app.presentation.components.StatusBadge
 import com.hostelhub.app.presentation.theme.*
 import com.hostelhub.app.utils.Formatters
@@ -76,7 +76,7 @@ fun StudentDashboardScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        // Welcome Top Header with Profile and Notifications
+        // 1. Clean, Simple Logo & Title Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -86,56 +86,73 @@ fun StudentDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                IconButton(
-                    onClick = onNavigateToProfile,
+                Box(
                     modifier = Modifier
-                        .background(StudentAccentContainer, shape = CircleShape)
                         .size(46.dp)
+                        .background(PrimaryNavy.copy(alpha = 0.12f), shape = CircleShape)
+                        .border(1.dp, PrimaryNavy.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "My Profile",
-                        tint = StudentOnAccentContainer,
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Default.School,
+                        contentDescription = "HostelHub Logo",
+                        tint = PrimaryNavy,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = if (studentName.isNotBlank()) "Hello, $studentName 👋" else "Welcome Student 👋",
+                        text = "HostelHub",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${stats.hostelName} • ${if (stats.roomNumber.isNotBlank()) "Room ${stats.roomNumber} (${stats.bedNumber})" else "Resident Student"}",
+                        text = if (studentName.isNotBlank()) "Student Portal • $studentName" else "Student Portal",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = SecondaryTeal,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            IconButton(
-                onClick = onNavigateToNotifications,
-                modifier = Modifier
-                    .background(StudentAccentContainer, shape = CircleShape)
-                    .size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Announcements",
-                    tint = StudentOnAccentContainer
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onNavigateToNotifications,
+                    modifier = Modifier
+                        .background(StudentAccentContainer, shape = CircleShape)
+                        .size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notices",
+                        tint = StudentOnAccentContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onNavigateToProfile,
+                    modifier = Modifier
+                        .background(StudentAccentContainer, shape = CircleShape)
+                        .size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = StudentOnAccentContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // 1. My Room & Bed Banner Card
+        // 2. My Room & Bed Banner Card
         AppCard(
             backgroundColor = StudentHeroBg,
-            padding = 20.dp,
+            padding = 18.dp,
             onClick = onNavigateToRoom
         ) {
             Row(
@@ -145,27 +162,27 @@ fun StudentDashboardScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Assigned Accommodation",
+                        text = "Allocated Accommodation",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (stats.roomNumber.isNotBlank()) "Room ${stats.roomNumber} • ${stats.bedNumber}" else "Room Allocation Active",
+                        text = if (stats.roomNumber.isNotBlank()) "Room ${stats.roomNumber} • ${stats.bedNumber}" else "Room Allocated",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = stats.hostelName,
+                        text = stats.hostelName.ifBlank { "Green Valley Residencies" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = Color.White.copy(alpha = 0.85f)
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
-                    text = "Room Specs →",
+                    text = "Room Info →",
                     statusType = BadgeStatusType.SUCCESS,
                     customBgColor = StudentBadgeBg,
                     customTextColor = StudentBadgeText
@@ -175,34 +192,38 @@ fun StudentDashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. Key Metrics: Live Fees & Maintenance Tickets
+        // 3. Key Metrics: Equal Sized Cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MetricStatCard(
-                title = "Fees & Dues (₹)",
+            EqualMetricCard(
+                title = "Fees & Dues",
                 value = if (stats.pendingFees > 0) Formatters.formatCurrency(stats.pendingFees) else "₹0.00",
+                subtitle = if (stats.pendingFees > 0) "Pending Payment" else "All Cleared",
                 icon = Icons.Default.Payment,
-                subtitle = if (stats.pendingFees > 0) "Pay Pending Dues" else "All Invoices Settled",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToPayments
+                iconTint = PrimaryNavy,
+                iconBg = PrimaryContainer,
+                onClick = onNavigateToPayments,
+                modifier = Modifier.weight(1f)
             )
-            MetricStatCard(
-                title = "Maintenance Tickets",
-                value = if (stats.activeComplaints > 0) "${stats.activeComplaints} Active" else "0 Open",
+            EqualMetricCard(
+                title = "Complaints",
+                value = if (stats.activeComplaints > 0) "${stats.activeComplaints} Active" else "0 Active",
+                subtitle = if (stats.activeComplaints > 0) "In Progress" else "Resolved",
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                subtitle = if (stats.activeComplaints > 0) "In Progress" else "Everything Working",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToComplaints
+                iconTint = SecondaryTeal,
+                iconBg = SecondaryTeal.copy(alpha = 0.15f),
+                onClick = onNavigateToComplaints,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // 3. Quick Actions Hub (Easy to tap grid)
+        // 4. Quick Actions Hub - Equal Sized Cards in 3-column Grid
         Text(
-            text = "Quick Navigation",
+            text = "Quick Portal Navigation",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -213,16 +234,16 @@ fun StudentDashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StudentQuickNavButton(
+            EqualQuickNavCard(
                 title = "Pay Fees",
-                subtitle = "Invoices in ₹",
+                subtitle = "Invoices & Dues",
                 icon = Icons.Default.Payment,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
                 onClick = onNavigateToPayments,
                 modifier = Modifier.weight(1f)
             )
-            StudentQuickNavButton(
+            EqualQuickNavCard(
                 title = "My Room",
                 subtitle = "Bed & Specs",
                 icon = Icons.Default.MeetingRoom,
@@ -231,7 +252,7 @@ fun StudentDashboardScreen(
                 onClick = onNavigateToRoom,
                 modifier = Modifier.weight(1f)
             )
-            StudentQuickNavButton(
+            EqualQuickNavCard(
                 title = "Mess Menu",
                 subtitle = "Daily Meals",
                 icon = Icons.Default.Restaurant,
@@ -248,7 +269,7 @@ fun StudentDashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StudentQuickNavButton(
+            EqualQuickNavCard(
                 title = "Complaints",
                 subtitle = "File Ticket",
                 icon = Icons.AutoMirrored.Filled.Assignment,
@@ -257,18 +278,18 @@ fun StudentDashboardScreen(
                 onClick = onNavigateToComplaints,
                 modifier = Modifier.weight(1f)
             )
-            StudentQuickNavButton(
+            EqualQuickNavCard(
                 title = "Notices",
-                subtitle = "Broadcasts",
+                subtitle = "Circulars",
                 icon = Icons.Default.Campaign,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
                 onClick = onNavigateToNotifications,
                 modifier = Modifier.weight(1f)
             )
-            StudentQuickNavButton(
-                title = "Explore Hostels",
-                subtitle = "Catalog & Pricing",
+            EqualQuickNavCard(
+                title = "Hostels",
+                subtitle = "Explore Catalog",
                 icon = Icons.Default.Apartment,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -277,9 +298,9 @@ fun StudentDashboardScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // 4. Today's Mess Food Menu Preview
+        // 5. Today's Mess Food Menu Preview
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -292,7 +313,7 @@ fun StudentDashboardScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
             TextButton(onClick = onNavigateToMenu) {
-                Text("Full Week Menu →", color = SecondaryTeal)
+                Text("Full Week →", color = SecondaryTeal, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -319,9 +340,9 @@ fun StudentDashboardScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // 5. Help & Emergency Contact Card
+        // 6. Help / Warden Support Card
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
@@ -332,7 +353,7 @@ fun StudentDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.HelpOutline,
+                    imageVector = Icons.Default.SupportAgent,
                     contentDescription = null,
                     tint = SecondaryTeal,
                     modifier = Modifier.size(28.dp)
@@ -340,13 +361,13 @@ fun StudentDashboardScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Need Assistance or Maintenance?",
+                        text = "Need Hostel Warden Assistance?",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Submit a complaint ticket anytime to notify the hostel warden immediately.",
+                        text = "File a maintenance or support ticket anytime for prompt resolution.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -364,7 +385,64 @@ fun StudentDashboardScreen(
 }
 
 @Composable
-private fun StudentQuickNavButton(
+private fun EqualMetricCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AppCard(
+        onClick = onClick,
+        modifier = modifier.height(118.dp),
+        padding = 14.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(iconBg, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
+                }
+            }
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EqualQuickNavCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -375,16 +453,17 @@ private fun StudentQuickNavButton(
 ) {
     AppCard(
         onClick = onClick,
-        modifier = modifier,
-        padding = 12.dp
+        modifier = modifier.height(115.dp),
+        padding = 10.dp
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .background(iconBg, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -392,21 +471,22 @@ private fun StudentQuickNavButton(
                     imageVector = icon,
                     contentDescription = title,
                     tint = iconTint,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
             )
-            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
             )
         }
     }

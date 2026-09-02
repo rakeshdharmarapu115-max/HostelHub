@@ -27,5 +27,6 @@ enum class PaymentMethod {
 enum class PaymentStatus {
     SUCCESS,
     PENDING,
-    FAILED
+    FAILED,
+    CANCELLED
 }

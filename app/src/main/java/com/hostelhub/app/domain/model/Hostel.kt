@@ -24,6 +24,8 @@ data class Hostel(
     val ratingCount: Int = 0,
     val contactEmail: String = "",
     val contactPhone: String = "",
+    val distanceKm: Double? = null,
+    val availableBeds: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val reviews: List<HostelReview> = emptyList()
 )

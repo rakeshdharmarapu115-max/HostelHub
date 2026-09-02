@@ -50,6 +50,49 @@ class DatabaseAuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun validateStudentId(studentId: String): Resource<com.hostelhub.app.data.remote.dto.ValidateStudentIdResponseDto> = withContext(Dispatchers.IO) {
+        Resource.Success(
+            com.hostelhub.app.data.remote.dto.ValidateStudentIdResponseDto(
+                valid = true,
+                studentId = studentId,
+                rollNumber = studentId,
+                fullName = "Resident Student",
+                collegeName = "Engineering Campus",
+                course = "B.Tech",
+                hostelName = "Green Valley Residencies",
+                roomNumber = "A-204"
+            )
+        )
+    }
+
+    override suspend fun activateStudent(studentId: String, emailOrPhone: String, password: String): Resource<User> = withContext(Dispatchers.IO) {
+        val user = User(
+            userId = "std_act_${System.currentTimeMillis() % 1000}",
+            email = if (emailOrPhone.contains("@")) emailOrPhone else "$emailOrPhone@campus.edu",
+            phoneNumber = if (!emailOrPhone.contains("@")) emailOrPhone else "",
+            role = UserRole.STUDENT,
+            fullName = "Resident Student",
+            studentId = studentId
+        )
+        currentUserState.value = user
+        Resource.Success(user)
+    }
+
+    override suspend fun forgotPassword(identifier: String): Resource<com.hostelhub.app.data.remote.dto.ForgotPasswordResponseDto> = withContext(Dispatchers.IO) {
+        Resource.Success(
+            com.hostelhub.app.data.remote.dto.ForgotPasswordResponseDto(
+                success = true,
+                message = "Verification code generated",
+                otpPreview = "123456",
+                identifier = identifier
+            )
+        )
+    }
+
+    override suspend fun resetPassword(identifier: String, otp: String, newPassword: String): Resource<Unit> = withContext(Dispatchers.IO) {
+        Resource.Success(Unit)
+    }
+
     override suspend fun registerStudent(student: Student, password: String): Resource<User> = withContext(Dispatchers.IO) {
         try {
             val userId = student.studentId.ifBlank { "std_" + System.currentTimeMillis() }
@@ -198,6 +241,44 @@ class DatabaseStudentRepositoryImpl @Inject constructor(
             emit(Resource.Error(e.message ?: "Failed to load dashboard statistics"))
         }
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun generateStudentId(): Resource<String> = withContext(Dispatchers.IO) {
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val randomSeq = String.format("%04d", (1..9999).random())
+        Resource.Success("STU-$year-$randomSeq")
+    }
+
+    override suspend fun createStudentByAdmin(
+        student: Student,
+        password: String
+    ): Resource<Student> = withContext(Dispatchers.IO) {
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val randomSeq = String.format("%04d", (1..9999).random())
+        val studentId = student.rollNumber.ifBlank { "STU-$year-$randomSeq" }
+        val newStudent = student.copy(
+            studentId = studentId,
+            userId = student.userId.ifBlank { "usr_local_${System.currentTimeMillis()}" },
+            rollNumber = studentId
+        )
+        daos.saveStudent(newStudent)
+        Resource.Success(newStudent)
+    }
+
+    override suspend fun deallocateStudent(studentId: String, remarks: String): Resource<Student> = withContext(Dispatchers.IO) {
+        val student = daos.getStudentById(studentId)
+        if (student != null) {
+            val updated = student.copy(
+                status = com.hostelhub.app.domain.model.StudentStatus.DEALLOCATED,
+                roomId = null,
+                roomNumber = null,
+                bedNumber = null
+            )
+            daos.saveStudent(updated)
+            Resource.Success(updated)
+        } else {
+            Resource.Error("Student not found")
+        }
+    }
 }
 
 @Singleton
@@ -215,6 +296,27 @@ class DatabaseHostelRepositoryImpl @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
+    override fun searchNearbyHostels(
+        lat: Double?,
+        lng: Double?,
+        radius: Double?,
+        city: String?,
+        query: String?
+    ): Flow<Resource<List<Hostel>>> = flow {
+        emit(Resource.Loading)
+        try {
+            val list = daos.getAllHostels()
+            val filtered = list.filter { hostel ->
+                val matchCity = city.isNullOrBlank() || hostel.city.contains(city, ignoreCase = true)
+                val matchQuery = query.isNullOrBlank() || hostel.name.contains(query, ignoreCase = true) || hostel.address.contains(query, ignoreCase = true)
+                matchCity && matchQuery
+            }
+            emit(Resource.Success(filtered))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to search nearby hostels"))
+        }
+    }.flowOn(Dispatchers.IO)
+
     override fun getHostelById(hostelId: String): Flow<Resource<Hostel>> = flow {
         emit(Resource.Loading)
         try {
@@ -228,6 +330,18 @@ class DatabaseHostelRepositoryImpl @Inject constructor(
             emit(Resource.Error(e.message ?: "Failed to load hostel details"))
         }
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun createHostel(hostel: Hostel): Resource<Hostel> = withContext(Dispatchers.IO) {
+        try {
+            val newHostel = hostel.copy(
+                hostelId = hostel.hostelId.ifBlank { "hostel_${System.currentTimeMillis()}" }
+            )
+            daos.saveHostel(newHostel)
+            Resource.Success(newHostel)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to save hostel")
+        }
+    }
 
     override suspend fun updateHostel(hostel: Hostel): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -294,6 +408,28 @@ class DatabaseHostelRepositoryImpl @Inject constructor(
         val hostel = daos.getHostelById(hostelId)
         if (hostel != null) {
             val updated = hostel.copy(images = hostel.images + images)
+            daos.saveHostel(updated)
+            Resource.Success(updated)
+        } else {
+            Resource.Error("Hostel not found")
+        }
+    }
+
+    override suspend fun updateHostelLocation(
+        hostelId: String,
+        latitude: Double,
+        longitude: Double,
+        address: String,
+        city: String
+    ): Resource<Hostel> = withContext(Dispatchers.IO) {
+        val hostel = daos.getHostelById(hostelId)
+        if (hostel != null) {
+            val updated = hostel.copy(
+                latitude = latitude,
+                longitude = longitude,
+                address = address,
+                city = city
+            )
             daos.saveHostel(updated)
             Resource.Success(updated)
         } else {
@@ -431,6 +567,83 @@ class DatabaseFeePaymentRepositoryImpl @Inject constructor(
             emit(Resource.Error(e.message ?: "Failed to fetch hostel payment history"))
         }
     }.flowOn(Dispatchers.IO)
+
+    override fun getTransactionHistory(): Flow<Resource<List<Payment>>> = flow {
+        emit(Resource.Loading)
+        try {
+            val payments = daos.getAllFees().map { fee ->
+                Payment(
+                    paymentId = "pay_${fee.feeId}",
+                    feeId = fee.feeId,
+                    studentId = fee.studentId,
+                    hostelId = fee.hostelId,
+                    amountPaid = fee.amountPaid,
+                    paymentMethod = PaymentMethod.UPI,
+                    transactionReference = "TXN-${fee.feeId}",
+                    status = PaymentStatus.SUCCESS
+                )
+            }
+            emit(Resource.Success(payments))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to fetch transactions"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun createRazorpayOrder(feeId: String, amount: Double?): Resource<com.hostelhub.app.data.remote.dto.RazorpayOrderResponseDto> = withContext(Dispatchers.IO) {
+        Resource.Success(
+            com.hostelhub.app.data.remote.dto.RazorpayOrderResponseDto(
+                orderId = "order_${System.currentTimeMillis()}",
+                amount = amount ?: 4500.0,
+                amountInPaise = ((amount ?: 4500.0) * 100).toLong(),
+                currency = "INR",
+                keyId = "rzp_test_hostelhub",
+                feeId = feeId,
+                feeTitle = "Hostel Fee",
+                studentName = "Resident Student",
+                hostelName = "Green Valley Residencies"
+            )
+        )
+    }
+
+    override suspend fun verifyRazorpayPayment(
+        feeId: String,
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String?,
+        amountPaid: Double?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        val payment = Payment(
+            paymentId = "pay_${System.currentTimeMillis()}",
+            feeId = feeId,
+            studentId = "std_001",
+            hostelId = "hostel_001",
+            amountPaid = amountPaid ?: 4500.0,
+            paymentMethod = PaymentMethod.UPI,
+            transactionReference = razorpayPaymentId,
+            status = PaymentStatus.SUCCESS
+        )
+        Resource.Success(payment)
+    }
+
+    override suspend fun recordPaymentFailure(
+        feeId: String,
+        razorpayOrderId: String?,
+        razorpayPaymentId: String?,
+        errorMessage: String?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        val payment = Payment(
+            paymentId = "fail_${System.currentTimeMillis()}",
+            feeId = feeId,
+            studentId = "std_001",
+            hostelId = "hostel_001",
+            amountPaid = 0.0,
+            paymentMethod = PaymentMethod.UPI,
+            transactionReference = razorpayPaymentId ?: "FAIL-${System.currentTimeMillis()}",
+            status = PaymentStatus.FAILED,
+            remarks = errorMessage
+        )
+        Resource.Success(payment)
+    }
 
     override suspend fun recordPayment(payment: Payment): Resource<Payment> = withContext(Dispatchers.IO) {
         try {

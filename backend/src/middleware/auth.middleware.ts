@@ -28,11 +28,29 @@ export async function authenticate(req: AuthenticatedRequest, res: Response, nex
           { adminProfile: { id: payload.userId } }
         ]
       },
-      select: { id: true, isActive: true, role: true }
+      select: {
+        id: true,
+        isActive: true,
+        role: true,
+        studentProfile: {
+          select: { status: true }
+        }
+      }
     });
 
     if (!user || !user.isActive) {
-      sendError(res, 'User account is inactive or not found', 403);
+      sendError(res, 'Your hostel allocation has ended. You have been logged out.', 403, undefined, 'HOSTEL_ALLOCATION_INACTIVE');
+      return;
+    }
+
+    if (user.role === 'STUDENT' && (user.studentProfile?.status === 'DEALLOCATED' || user.studentProfile?.status !== 'ACTIVE')) {
+      sendError(
+        res,
+        'Your hostel allocation has ended. You have been logged out.',
+        403,
+        undefined,
+        'HOSTEL_ALLOCATION_INACTIVE'
+      );
       return;
     }
 

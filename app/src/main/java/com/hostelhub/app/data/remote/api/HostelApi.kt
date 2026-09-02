@@ -5,6 +5,24 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface HostelApi {
+    @GET("hostels/search")
+    suspend fun searchNearbyHostels(
+        @Query("lat") lat: Double? = null,
+        @Query("lng") lng: Double? = null,
+        @Query("radius") radius: Double? = null,
+        @Query("city") city: String? = null,
+        @Query("gender") gender: String? = null,
+        @Query("query") query: String? = null,
+        @Query("minRent") minRent: Double? = null,
+        @Query("maxRent") maxRent: Double? = null
+    ): Response<ApiResponse<List<HostelDto>>>
+
+    @PUT("hostels/{id}/location")
+    suspend fun updateHostelLocation(
+        @Path("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<ApiResponse<HostelDto>>
+
     @GET("hostels")
     suspend fun getHostels(
         @Query("city") city: String? = null,

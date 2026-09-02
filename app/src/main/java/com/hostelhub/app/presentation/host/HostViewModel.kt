@@ -458,4 +458,94 @@ class HostViewModel @Inject constructor(
             }
         }
     }
+
+    fun generateStudentId(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            when (val res = studentRepository.generateStudentId()) {
+                is Resource.Success -> onResult(res.data)
+                is Resource.Error -> {
+                    val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                    val rand = (1000..9999).random()
+                    onResult("STU-$year-$rand")
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun addStudentByOwner(
+        student: Student,
+        onSuccess: (Student) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val resolvedStudent = if (student.hostelId.isNullOrBlank()) {
+                student.copy(hostelId = _currentHostelId.value)
+            } else {
+                student
+            }
+            when (val res = studentRepository.createStudentByAdmin(resolvedStudent, "HostelResident@2026")) {
+                is Resource.Success -> {
+                    val currentHId = _currentHostelId.value.ifBlank { "hostel_001" }
+                    loadResidents(currentHId)
+                    loadRooms(currentHId)
+                    loadDashboardStats(currentHId)
+                    onSuccess(res.data)
+                }
+                is Resource.Error -> {
+                    onError(res.message)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun deallocateStudent(
+        studentId: String,
+        remarks: String = "",
+        onSuccess: (Student) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = studentRepository.deallocateStudent(studentId, remarks)
+            when (result) {
+                is Resource.Success -> {
+                    val currentHId = _currentHostelId.value.ifBlank { "hostel_001" }
+                    loadResidents(currentHId)
+                    loadRooms(currentHId)
+                    loadDashboardStats(currentHId)
+                    onSuccess(result.data)
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun updateHostelLocation(
+        latitude: Double,
+        longitude: Double,
+        address: String,
+        city: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val currentHId = _currentHostelId.value.ifBlank { "hostel_001" }
+            val result = hostelRepository.updateHostelLocation(currentHId, latitude, longitude, address, city)
+            when (result) {
+                is Resource.Success -> {
+                    loadHostelInfo(currentHId)
+                    loadDashboardStats(currentHId)
+                    onSuccess()
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
 }

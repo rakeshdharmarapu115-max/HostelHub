@@ -22,15 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.hostelhub.app.presentation.theme.InputFieldShape
-import com.hostelhub.app.presentation.theme.OutlineColor
-import com.hostelhub.app.presentation.theme.PrimaryNavy
-import com.hostelhub.app.presentation.theme.StatusError
-import com.hostelhub.app.presentation.theme.SurfaceWhite
+import com.hostelhub.app.presentation.theme.*
 
 @Composable
 fun AppTextField(
@@ -123,12 +120,16 @@ fun AppTextField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = SurfaceWhite,
                 unfocusedContainerColor = SurfaceWhite,
-                disabledContainerColor = SurfaceWhite.copy(alpha = 0.5f),
+                disabledContainerColor = SurfaceVariant.copy(alpha = 0.5f),
                 errorContainerColor = SurfaceWhite,
                 focusedBorderColor = PrimaryNavy,
-                unfocusedBorderColor = OutlineColor.copy(alpha = 0.5f),
+                unfocusedBorderColor = OutlineColor.copy(alpha = 0.4f),
                 errorBorderColor = StatusError,
-                cursorColor = PrimaryNavy
+                cursorColor = PrimaryNavy,
+                focusedTextColor = OnSurface,
+                unfocusedTextColor = OnSurface,
+                focusedPlaceholderColor = OutlineColor,
+                unfocusedPlaceholderColor = OutlineColor
             )
         )
         if (isError) {

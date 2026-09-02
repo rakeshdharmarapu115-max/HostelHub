@@ -62,6 +62,52 @@ export class StudentsController {
     }
   }
 
+  async generateStudentId(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const studentId = await studentsService.generateUniqueStudentId();
+      sendSuccess(res, 'Student ID generated successfully', { studentId });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createStudentByAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await studentsService.createStudentByAdmin(req.body, req.user);
+      sendSuccess(res, result.message, result, 201);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  async deallocateStudent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const targetStudentId = req.params.id || req.body.studentId;
+      const remarks = req.body.remarks;
+      const requesterHostId = req.user?.profileId;
+      const requesterRole = req.user?.role;
+
+      const result = await studentsService.deallocateStudent({
+        studentId: targetStudentId,
+        requesterHostId,
+        requesterRole,
+        remarks
+      });
+
+      sendSuccess(res, result.message, result);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
   async deleteStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await studentsService.deleteStudent(req.params.id);

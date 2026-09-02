@@ -45,10 +45,65 @@ export class AuthController {
     }
   }
 
+  async validateStudentId(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { studentId } = req.body;
+      const result = await authService.validateStudentId(studentId);
+      sendSuccess(res, 'Student ID verified successfully', result, 200);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  async activateStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await authService.activateStudent(req.body);
+      sendSuccess(res, 'Student account activated successfully', result, 200);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { identifier } = req.body;
+      const result = await authService.forgotPassword(identifier);
+      sendSuccess(res, result.message, result, 200);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await authService.resetPassword(req.body);
+      sendSuccess(res, result.message, result, 200);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
-      const result = await authService.login(email, password);
+      const { email, identifier, studentId, phoneNumber, password } = req.body;
+      const idToUse = identifier || email || studentId || phoneNumber;
+      const result = await authService.login(idToUse, password);
       sendSuccess(res, 'Login successful', result, 200);
     } catch (error: any) {
       if (error.status) {

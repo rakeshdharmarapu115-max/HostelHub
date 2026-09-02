@@ -51,10 +51,14 @@ data class PaymentDto(
     @SerializedName("paymentId") val paymentId: String = "",
     @SerializedName("feeId") val feeId: String = "",
     @SerializedName("studentId") val studentId: String = "",
+    @SerializedName("studentName") val studentName: String? = null,
+    @SerializedName("feeTitle") val feeTitle: String? = null,
     @SerializedName("hostelId") val hostelId: String = "",
     @SerializedName("amountPaid") val amountPaid: Double = 0.0,
     @SerializedName("paymentMethod") val paymentMethod: String = "UPI",
     @SerializedName("transactionReference") val transactionReference: String = "",
+    @SerializedName("razorpayOrderId") val razorpayOrderId: String? = null,
+    @SerializedName("razorpayPaymentId") val razorpayPaymentId: String? = null,
     @SerializedName("paymentDate") val paymentDate: Long = System.currentTimeMillis(),
     @SerializedName("receiptUrl") val receiptUrl: String? = null,
     @SerializedName("status") val status: String = "SUCCESS",
@@ -90,6 +94,41 @@ data class PaymentDto(
         )
     }
 }
+
+data class CreateRazorpayOrderRequestDto(
+    @SerializedName("feeId") val feeId: String,
+    @SerializedName("amount") val amount: Double? = null
+)
+
+data class RazorpayOrderResponseDto(
+    @SerializedName("orderId") val orderId: String = "",
+    @SerializedName("amount") val amount: Double = 0.0,
+    @SerializedName("amountInPaise") val amountInPaise: Long = 0L,
+    @SerializedName("currency") val currency: String = "INR",
+    @SerializedName("keyId") val keyId: String = "",
+    @SerializedName("feeId") val feeId: String = "",
+    @SerializedName("feeTitle") val feeTitle: String = "",
+    @SerializedName("studentName") val studentName: String = "",
+    @SerializedName("studentEmail") val studentEmail: String = "",
+    @SerializedName("studentPhone") val studentPhone: String = "",
+    @SerializedName("hostelName") val hostelName: String = ""
+)
+
+data class VerifyRazorpayPaymentRequestDto(
+    @SerializedName("feeId") val feeId: String,
+    @SerializedName("razorpayOrderId") val razorpayOrderId: String,
+    @SerializedName("razorpayPaymentId") val razorpayPaymentId: String,
+    @SerializedName("razorpaySignature") val razorpaySignature: String? = null,
+    @SerializedName("amountPaid") val amountPaid: Double? = null
+)
+
+data class RecordPaymentFailureRequestDto(
+    @SerializedName("feeId") val feeId: String,
+    @SerializedName("razorpayOrderId") val razorpayOrderId: String? = null,
+    @SerializedName("razorpayPaymentId") val razorpayPaymentId: String? = null,
+    @SerializedName("errorMessage") val errorMessage: String? = null,
+    @SerializedName("amount") val amount: Double? = null
+)
 
 data class CreateFeeRequestDto(
     @SerializedName("hostelId") val hostelId: String,

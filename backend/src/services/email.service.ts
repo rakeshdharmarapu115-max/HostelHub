@@ -47,6 +47,22 @@ export class EmailService {
     });
   }
 
+  async sendNotificationEmail(to: string, subject: string, message: string): Promise<boolean> {
+    return this.sendEmail({
+      to,
+      subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #4F46E5;">HostelHub Notice</h2>
+          <p>${message.replace(/\n/g, '<br/>')}</p>
+          <br>
+          <p style="color: #64748B; font-size: 12px;">HostelHub Management System • Cloud Platform</p>
+        </div>
+      `,
+      text: message
+    });
+  }
+
   async sendPaymentReceiptEmail(to: string, studentName: string, amount: number, transactionRef: string, feeTitle: string): Promise<boolean> {
     return this.sendEmail({
       to,

@@ -15,6 +15,7 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "cloud:deploy": "prisma generate && prisma db push && tsc",
+    "cloud:check": "ts-node src/scripts/testCloudConnection.ts",
     "test": "jest --detectOpenHandles --forceExit"
   },
   "prisma": {

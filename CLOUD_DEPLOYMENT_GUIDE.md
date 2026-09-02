@@ -80,7 +80,7 @@ The repository includes a ready-to-deploy [`render.yaml`](file:///c:/Users/HP/ho
    - **`hostelhub-db`**: Free PostgreSQL database (if using Render DB).
 6. Click **Apply**.
 7. Once deployed, Render will provide a public URL like:
-   `https://hostelhub-backend.onrender.com`
+   `https://hostelhub-yp73.onrender.com`
 
 ---
 
@@ -129,6 +129,6 @@ To enable cloud storage for hostel gallery photos, profile avatars, and payment 
 
 1. Open the **HostelHub Android App**.
 2. Tap the **Server IP / Network** icon at the top-right of the Login screen (or go to **Settings** -> **Network Configuration**).
-3. Paste your public Render URL (e.g. `https://hostelhub-backend.onrender.com/api/`).
+3. Paste your public Render URL (e.g. `https://hostelhub-yp73.onrender.com/api/`).
 4. Tap **Save & Apply**.
 5. The Android client will instantly communicate with your live cloud backend and database from any Wi-Fi, 4G, or 5G connection globally!

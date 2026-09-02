@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hostelhub.app.domain.model.Student
 import com.hostelhub.app.domain.model.User
 import com.hostelhub.app.domain.model.UserRole
 import com.hostelhub.app.presentation.components.*
@@ -47,12 +50,255 @@ fun AdminUserManagementScreen(
         matchesQuery && matchesRole
     }
 
+    var showAddStudentDialog by remember { mutableStateOf(false) }
+    var createdStudentResult by remember { mutableStateOf<Pair<Student, String>?>(null) }
+
+    val generatedId by adminViewModel?.generatedStudentId?.collectAsState() ?: remember { mutableStateOf("") }
+
+    val hostelsState by adminViewModel?.hostels?.collectAsState() ?: remember { mutableStateOf(UiState.Idle) }
+    val availableHostels = (hostelsState as? UiState.Success)?.data ?: emptyList()
+
+    // Add Student Modal Dialog
+    if (showAddStudentDialog) {
+        var fullName by remember { mutableStateOf("") }
+        var email by remember { mutableStateOf("") }
+        var phone by remember { mutableStateOf("") }
+        var collegeName by remember { mutableStateOf("Apex Engineering College") }
+        var course by remember { mutableStateOf("B.Tech Computer Science") }
+        var yearOfStudy by remember { mutableStateOf("1") }
+        var gender by remember { mutableStateOf("male") }
+        var address by remember { mutableStateOf("Main Campus Resident") }
+        var emergencyName by remember { mutableStateOf("") }
+        var emergencyPhone by remember { mutableStateOf("") }
+        var initialPassword by remember { mutableStateOf("Password@123") }
+        var selectedHostelId by remember { mutableStateOf("") }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        var isSubmitting by remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            if (generatedId.isBlank()) {
+                adminViewModel?.fetchGeneratedStudentId()
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { if (!isSubmitting) showAddStudentDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = AdminAccent)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Student & Generate ID", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 450.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Generated Student ID Banner
+                    Surface(
+                        color = AdminAccentContainer,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Assigned Student ID:", style = MaterialTheme.typography.labelSmall, color = AdminOnAccentContainer)
+                                Text(
+                                    text = if (generatedId.isNotBlank()) generatedId else "Generating...",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AdminAccent
+                                )
+                            }
+                            IconButton(onClick = { adminViewModel?.fetchGeneratedStudentId() }) {
+                                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh ID", tint = AdminAccent)
+                            }
+                        }
+                    }
+
+                    if (errorMessage != null) {
+                        Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    AppTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = "Full Name *",
+                        placeholder = "e.g. John Doe",
+                        leadingIcon = Icons.Default.Person
+                    )
+
+                    AppTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = "Email Address (Optional)",
+                        placeholder = "Auto-generated if blank",
+                        leadingIcon = Icons.Default.Email
+                    )
+
+                    AppTextField(
+                        value = collegeName,
+                        onValueChange = { collegeName = it },
+                        label = "College / University *",
+                        leadingIcon = Icons.Default.School
+                    )
+
+                    AppTextField(
+                        value = course,
+                        onValueChange = { course = it },
+                        label = "Course & Branch *",
+                        leadingIcon = Icons.Default.MenuBook
+                    )
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppTextField(
+                                value = yearOfStudy,
+                                onValueChange = { yearOfStudy = it },
+                                label = "Year",
+                                placeholder = "1, 2, 3, 4"
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppTextField(
+                                value = gender,
+                                onValueChange = { gender = it },
+                                label = "Gender",
+                                placeholder = "male / female"
+                            )
+                        }
+                    }
+
+                    AppTextField(
+                        value = emergencyPhone,
+                        onValueChange = { emergencyPhone = it },
+                        label = "Contact Phone Number *",
+                        placeholder = "+91 9876543210",
+                        leadingIcon = Icons.Default.Phone
+                    )
+
+                    AppTextField(
+                        value = initialPassword,
+                        onValueChange = { initialPassword = it },
+                        label = "Default Password *",
+                        leadingIcon = Icons.Default.Lock
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (fullName.isBlank() || collegeName.isBlank() || course.isBlank()) {
+                            errorMessage = "Full Name, College, and Course are required."
+                            return@Button
+                        }
+                        isSubmitting = true
+                        errorMessage = null
+                        val studentToCreate = Student(
+                            fullName = fullName.trim(),
+                            email = email.trim(),
+                            rollNumber = generatedId,
+                            collegeName = collegeName.trim(),
+                            course = course.trim(),
+                            yearOfStudy = yearOfStudy.trim(),
+                            gender = gender.trim(),
+                            permanentAddress = address.trim(),
+                            emergencyContactName = emergencyName.ifBlank { "$fullName Guardian" },
+                            emergencyContactPhone = emergencyPhone.ifBlank { "0000000000" },
+                            hostelId = selectedHostelId.ifBlank { null }
+                        )
+
+                        adminViewModel?.createStudentByAdmin(
+                            student = studentToCreate,
+                            password = initialPassword.trim(),
+                            onSuccess = { created ->
+                                isSubmitting = false
+                                showAddStudentDialog = false
+                                createdStudentResult = Pair(created, initialPassword)
+                                adminViewModel.fetchGeneratedStudentId()
+                            },
+                            onError = { err ->
+                                isSubmitting = false
+                                errorMessage = err
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AdminAccent),
+                    enabled = !isSubmitting
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Register & Issue ID")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddStudentDialog = false }, enabled = !isSubmitting) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Success Credential Dialog
+    createdStudentResult?.let { (student, pwd) ->
+        AlertDialog(
+            onDismissRequest = { createdStudentResult = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SecondaryTeal)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Student Registered Successfully!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Student account provisioned and Student ID generated:", style = MaterialTheme.typography.bodyMedium)
+                    Surface(color = SurfaceContainer, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Name: ${student.fullName}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text("🆔 Student ID: ${student.rollNumber}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.ExtraBold, color = AdminAccent)
+                            Text("🔑 Initial Password: $pwd", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Text("The student can now sign in using their Student ID and password.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { createdStudentResult = null }, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent)) {
+                    Text("Done")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "Association User & Warden Registry",
                 canNavigateBack = true,
                 onNavigateBack = onNavigateBack
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    adminViewModel?.fetchGeneratedStudentId()
+                    showAddStudentDialog = true
+                },
+                icon = { Icon(Icons.Default.PersonAdd, contentDescription = "Add Student") },
+                text = { Text("Add Student / Generate ID", fontWeight = FontWeight.Bold) },
+                containerColor = AdminAccent,
+                contentColor = Color.White
             )
         }
     ) { paddingValues ->

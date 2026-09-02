@@ -56,6 +56,7 @@ fun SettingsScreen(
     var pingStatus by remember { mutableStateOf<String?>(null) }
     var isPinging by remember { mutableStateOf(false) }
 
+    val themeMode by appSettingsManager.themeMode.collectAsState()
     val isDarkMode by appSettingsManager.isDarkMode.collectAsState()
     val pushNotifications by appSettingsManager.pushNotifications.collectAsState()
     val feeReminders by appSettingsManager.feeReminders.collectAsState()
@@ -183,170 +184,36 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             AppCard(padding = 16.dp) {
-                SettingSwitchRow(
-                    title = "Dark Mode Theme",
-                    subtitle = "Sleek dark interface with high contrast",
-                    icon = Icons.Default.DarkMode,
-                    checked = isDarkMode,
-                    onCheckedChange = { appSettingsManager.setDarkMode(it) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 3. Worldwide Server & Network Connectivity
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = "Server & Cross-Network Connection",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    text = "Theme Preference",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                TextButton(onClick = {
-                    customUrlInput = currentBaseUrl
-                    showServerDialog = true
-                }) {
-                    Text("Change URL ✏️", color = SecondaryTeal, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            AppCard(padding = 16.dp) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(
-                                if (networkConfig.isCloudOrTunnel()) SecondaryTeal.copy(alpha = 0.15f) else PrimaryNavy.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (networkConfig.isCloudOrTunnel()) Icons.Default.CloudDone else Icons.Default.Wifi,
-                            contentDescription = null,
-                            tint = if (networkConfig.isCloudOrTunnel()) SecondaryTeal else PrimaryNavy,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = if (networkConfig.isCloudOrTunnel()) "Worldwide Cloud / Tunnel" else "Local LAN Wi-Fi",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                color = if (networkConfig.isCloudOrTunnel()) SecondaryTeal.copy(alpha = 0.2f) else PrimaryNavy.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    text = if (networkConfig.isCloudOrTunnel()) "Any Network / 4G / 5G" else "Same Wi-Fi",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (networkConfig.isCloudOrTunnel()) SecondaryTeal else PrimaryNavy
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = currentBaseUrl,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                if (pingStatus != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = pingStatus ?: "",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (pingStatus?.contains("Online") == true) SecondaryTeal else MaterialTheme.colorScheme.error
-                    )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Choose light mode, dark mode, or follow your system default",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            isPinging = true
-                            pingStatus = "Testing connection..."
-                            coroutineScope.launch(Dispatchers.IO) {
-                                val startTime = System.currentTimeMillis()
-                                try {
-                                    val url = URL(currentBaseUrl + "hostels")
-                                    val conn = url.openConnection() as HttpURLConnection
-                                    conn.connectTimeout = 5000
-                                    conn.readTimeout = 5000
-                                    conn.setRequestProperty("Bypass-Tunnel-Reminder", "true")
-                                    conn.requestMethod = "GET"
-                                    val code = conn.responseCode
-                                    val elapsed = System.currentTimeMillis() - startTime
-                                    withContext(Dispatchers.Main) {
-                                        isPinging = false
-                                        if (code in 200..299) {
-                                            pingStatus = "✓ Online & Connected (${elapsed}ms latency)"
-                                        } else {
-                                            pingStatus = "⚠️ Server responded with HTTP $code (${elapsed}ms)"
-                                        }
-                                    }
-                                    conn.disconnect()
-                                } catch (e: Exception) {
-                                    withContext(Dispatchers.Main) {
-                                        isPinging = false
-                                        pingStatus = "❌ Connection Failed: ${e.localizedMessage ?: "Unreachable"}"
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isPinging
-                    ) {
-                        Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isPinging) "Pinging..." else "⚡ Ping Test", style = MaterialTheme.typography.labelMedium)
-                    }
-
-                    Button(
-                        onClick = {
-                            val newUrl = if (networkConfig.isCloudOrTunnel()) {
-                                NetworkConfig.DEFAULT_LOCAL_URL
-                            } else {
-                                NetworkConfig.DEFAULT_GLOBAL_URL
-                            }
-                            networkConfig.setCustomBaseUrl(newUrl)
-                            currentBaseUrl = networkConfig.getBaseUrl()
-                            pingStatus = null
-                            Toast.makeText(context, "Switched to: $currentBaseUrl", Toast.LENGTH_SHORT).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (networkConfig.isCloudOrTunnel()) PrimaryNavy else SecondaryTeal
-                        ),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = if (networkConfig.isCloudOrTunnel()) "Switch to LAN" else "Switch to Cloud",
-                            style = MaterialTheme.typography.labelMedium
+                    listOf(
+                        Triple(com.hostelhub.app.data.local.ThemeMode.LIGHT, "Light", Icons.Default.LightMode),
+                        Triple(com.hostelhub.app.data.local.ThemeMode.DARK, "Dark", Icons.Default.DarkMode),
+                        Triple(com.hostelhub.app.data.local.ThemeMode.SYSTEM_DEFAULT, "System", Icons.Default.BrightnessAuto)
+                    ).forEach { (mode, label, icon) ->
+                        FilterChip(
+                            selected = themeMode == mode,
+                            onClick = { appSettingsManager.setThemeMode(mode) },
+                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                            },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -702,75 +569,6 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showEmergencyReportDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Change Server URL Dialog
-    if (showServerDialog) {
-        AlertDialog(
-            onDismissRequest = { showServerDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Dns, contentDescription = null, tint = PrimaryNavy)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Server Connection URL", style = MaterialTheme.typography.titleLarge)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Enter any Worldwide Cloud / Tunnel URL (HTTPS) or local Wi-Fi IP address (HTTP):",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    AppTextField(
-                        value = customUrlInput,
-                        onValueChange = { customUrlInput = it },
-                        label = "API Base URL",
-                        placeholder = "https://your-tunnel.loca.lt/api/"
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { customUrlInput = NetworkConfig.DEFAULT_GLOBAL_URL },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(4.dp)
-                        ) {
-                            Text("Default Cloud", style = MaterialTheme.typography.labelSmall)
-                        }
-                        OutlinedButton(
-                            onClick = { customUrlInput = NetworkConfig.DEFAULT_LOCAL_URL },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(4.dp)
-                        ) {
-                            Text("Default LAN", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (customUrlInput.isNotBlank()) {
-                            networkConfig.setCustomBaseUrl(customUrlInput)
-                            currentBaseUrl = networkConfig.getBaseUrl()
-                            pingStatus = null
-                            Toast.makeText(context, "Server URL updated!", Toast.LENGTH_SHORT).show()
-                            showServerDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
-                ) {
-                    Text("Apply")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showServerDialog = false }) {
                     Text("Cancel")
                 }
             }

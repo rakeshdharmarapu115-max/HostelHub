@@ -17,6 +17,7 @@ import javax.inject.Inject
 class AdminViewModel @Inject constructor(
     private val hostelRepository: HostelRepository,
     private val authRepository: AuthRepository,
+    private val studentRepository: StudentRepository,
     private val announcementRepository: AnnouncementRepository,
     private val complaintRepository: ComplaintRepository,
     private val feePaymentRepository: FeePaymentRepository
@@ -33,6 +34,9 @@ class AdminViewModel @Inject constructor(
 
     private val _users = MutableStateFlow<UiState<List<User>>>(UiState.Loading)
     val users: StateFlow<UiState<List<User>>> = _users.asStateFlow()
+
+    private val _generatedStudentId = MutableStateFlow<String>("")
+    val generatedStudentId: StateFlow<String> = _generatedStudentId.asStateFlow()
 
     private val _announcements = MutableStateFlow<UiState<List<Announcement>>>(UiState.Loading)
     val announcements: StateFlow<UiState<List<Announcement>>> = _announcements.asStateFlow()
@@ -166,6 +170,42 @@ class AdminViewModel @Inject constructor(
             announcementRepository.createAnnouncement(announcement)
             loadAnnouncements()
             onSuccess()
+        }
+    }
+
+    fun fetchGeneratedStudentId() {
+        viewModelScope.launch {
+            when (val res = studentRepository.generateStudentId()) {
+                is Resource.Success -> {
+                    _generatedStudentId.value = res.data
+                }
+                is Resource.Error -> {
+                    val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                    val rand = (1000..9999).random()
+                    _generatedStudentId.value = "STU-$year-$rand"
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun createStudentByAdmin(
+        student: Student,
+        password: String,
+        onSuccess: (Student) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            when (val res = studentRepository.createStudentByAdmin(student, password)) {
+                is Resource.Success -> {
+                    loadUsers()
+                    onSuccess(res.data)
+                }
+                is Resource.Error -> {
+                    onError(res.message)
+                }
+                else -> {}
+            }
         }
     }
 

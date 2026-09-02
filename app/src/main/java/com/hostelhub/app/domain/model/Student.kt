@@ -24,6 +24,9 @@ data class Student(
 
 enum class StudentStatus {
     ACTIVE,
+    ALLOCATED,
     VACATED,
+    DEALLOCATED,
+    INACTIVE,
     PENDING_APPROVAL
 }

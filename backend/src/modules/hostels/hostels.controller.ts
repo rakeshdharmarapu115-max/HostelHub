@@ -113,6 +113,53 @@ export class HostelsController {
     }
   }
 
+  async searchNearby(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { lat, lng, radius, city, gender, query, minRent, maxRent } = req.query;
+      const hostels = await hostelsService.searchNearbyHostels({
+        lat: lat ? Number(lat) : undefined,
+        lng: lng ? Number(lng) : undefined,
+        radius: radius ? Number(radius) : undefined,
+        city: city as string,
+        gender: gender as string,
+        query: query as string,
+        minRent: minRent ? Number(minRent) : undefined,
+        maxRent: maxRent ? Number(maxRent) : undefined
+      });
+      sendSuccess(res, 'Hostels found successfully', hostels);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateLocation(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostelId = req.params.id;
+      const { latitude, longitude, address, city, state, postalCode } = req.body;
+      const requesterHostId = req.user?.profileId;
+      const requesterRole = req.user?.role;
+
+      const updated = await hostelsService.updateHostelLocation(hostelId, {
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        address,
+        city,
+        state,
+        postalCode,
+        requesterHostId,
+        requesterRole
+      });
+
+      sendSuccess(res, 'Hostel location updated successfully', updated);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
   async deleteHostel(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await hostelsService.deleteHostel(req.params.id);

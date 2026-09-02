@@ -96,6 +96,77 @@ class RemoteStudentRepositoryImpl @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
+    override suspend fun generateStudentId(): Resource<String> = withContext(Dispatchers.IO) {
+        try {
+            val response = studentApi.generateStudentId()
+            if (response.isSuccessful && response.body()?.data != null) {
+                val studentId = response.body()!!.data!!["studentId"] ?: ""
+                Resource.Success(studentId)
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to generate Student ID")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error generating Student ID")
+        }
+    }
+
+    override suspend fun createStudentByAdmin(student: Student, password: String): Resource<Student> = withContext(Dispatchers.IO) {
+        try {
+            val payload = mapOf(
+                "fullName" to student.fullName,
+                "email" to student.email,
+                "phoneNumber" to student.emergencyContactPhone,
+                "collegeName" to student.collegeName,
+                "course" to student.course,
+                "yearOfStudy" to student.yearOfStudy,
+                "gender" to student.gender,
+                "permanentAddress" to student.permanentAddress,
+                "emergencyContactName" to student.emergencyContactName,
+                "emergencyContactPhone" to student.emergencyContactPhone,
+                "studentId" to student.rollNumber,
+                "password" to password,
+                "hostelId" to (student.hostelId ?: ""),
+                "roomId" to (student.roomId ?: ""),
+                "bedNumber" to (student.bedNumber ?: "")
+            )
+            var response = studentApi.createStudentByAdmin(payload)
+            if (response.code() == 404) {
+                response = studentApi.createStudentDirect(payload)
+            }
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(student)
+            } else {
+                val errorMsg = try {
+                    val rawError = response.errorBody()?.string()
+                    if (!rawError.isNullOrBlank()) {
+                        val json = org.json.JSONObject(rawError)
+                        json.optString("message", json.optString("error", "Failed to create student record (HTTP ${response.code()})"))
+                    } else {
+                        response.body()?.message ?: "Failed to create student record (HTTP ${response.code()})"
+                    }
+                } catch (_: Exception) {
+                    "Failed to create student record (HTTP ${response.code()})"
+                }
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error registering student")
+        }
+    }
+
+    override suspend fun deallocateStudent(studentId: String, remarks: String): Resource<Student> = withContext(Dispatchers.IO) {
+        try {
+            val response = studentApi.deallocateStudent(studentId, mapOf("remarks" to remarks))
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!.toDomain())
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to deallocate student")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error deallocating student")
+        }
+    }
+
     override suspend fun deleteStudent(studentId: String): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = studentApi.deleteStudent(studentId)

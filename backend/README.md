@@ -83,7 +83,7 @@ To keep the backend running 24/7 without needing your PC to stay turned on:
 
 | Mode | Base URL Format | Reachability |
 |---|---|---|
-| **🌐 Cloud Deployment** | `https://hostelhub-backend.onrender.com/api/` | **Worldwide (All Networks, 4G/5G, Any Wi-Fi)** |
+| **🌐 Cloud Deployment** | `https://hostelhub-yp73.onrender.com/api/` | **Worldwide (All Networks, 4G/5G, Any Wi-Fi)** |
 | **🌍 Global Tunnel** | `https://your-subdomain.loca.lt/api/` | **Worldwide (All Networks, 4G/5G, Any Wi-Fi)** |
 | **📶 Local Wi-Fi** | `http://192.168.29.196:5000/api/` | Same Wi-Fi Router Only |
 | **💻 Android Emulator** | `http://10.0.2.2:5000/api/` | PC Emulator Loopback Only |

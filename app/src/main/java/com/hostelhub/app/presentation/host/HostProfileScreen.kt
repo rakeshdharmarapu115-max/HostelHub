@@ -1,6 +1,9 @@
 package com.hostelhub.app.presentation.host
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,6 +39,23 @@ fun HostProfileScreen(
 ) {
     val context = LocalContext.current
     var showAddPhotoModal by remember { mutableStateOf(false) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            val uriStrings = uris.map { it.toString() }
+            hostViewModel?.uploadHostelImages(
+                images = uriStrings,
+                onSuccess = {
+                    Toast.makeText(context, "Added ${uris.size} photo(s) from Gallery!", Toast.LENGTH_SHORT).show()
+                },
+                onError = { err ->
+                    Toast.makeText(context, "Upload note: $err", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    }
 
     val currentUser by hostViewModel?.currentUser?.collectAsState() ?: remember {
         mutableStateOf(null)
@@ -135,14 +155,16 @@ fun HostProfileScreen(
                         )
                     }
 
-                    Button(
-                        onClick = { showAddPhotoModal = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add Photos", style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(
+                            onClick = { galleryLauncher.launch("image/*") },
+                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("From Gallery", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
 
@@ -169,6 +191,170 @@ fun HostProfileScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Hostel Physical Location & GPS Card
+            var showLocationModal by remember { mutableStateOf(false) }
+
+            AppCard(padding = 16.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Hostel Physical Location & GPS",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryNavy
+                        )
+                        Text(
+                            text = if (hostel != null && (hostel.latitude != 0.0 || hostel.longitude != 0.0))
+                                "📍 Lat: ${hostel.latitude}, Lng: ${hostel.longitude} (${hostel.city})"
+                            else
+                                "Location coordinates not configured",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (hostel != null && (hostel.latitude != 0.0 || hostel.longitude != 0.0)) SecondaryTeal else MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Button(
+                        onClick = { showLocationModal = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Set Location", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    color = SurfaceContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Street Address: ${hostel?.address ?: "Campus Zone"}", style = MaterialTheme.typography.bodySmall)
+                        Text("City & State: ${hostel?.city ?: "Hyderabad"}, ${hostel?.state ?: "Telangana"}", style = MaterialTheme.typography.bodySmall)
+                        Text("GPS Pin: ${if (hostel != null && hostel.latitude != 0.0) "${hostel.latitude}° N, ${hostel.longitude}° E" else "Not set"}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+                    }
+                }
+            }
+
+            // Edit Location Dialog
+            if (showLocationModal) {
+                var latInput by remember { mutableStateOf(if (hostel != null && hostel.latitude != 0.0) hostel.latitude.toString() else "17.3850") }
+                var lngInput by remember { mutableStateOf(if (hostel != null && hostel.longitude != 0.0) hostel.longitude.toString() else "78.4867") }
+                var addressInput by remember { mutableStateOf(hostel?.address ?: "100 HiTech City Boulevard") }
+                var cityInput by remember { mutableStateOf(hostel?.city ?: "Hyderabad") }
+                var isSavingLocation by remember { mutableStateOf(false) }
+
+                AlertDialog(
+                    onDismissRequest = { if (!isSavingLocation) showLocationModal = false },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PinDrop, contentDescription = null, tint = SecondaryTeal)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Set Hostel GPS Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Configure exact coordinates for student radius discovery and map navigation:", style = MaterialTheme.typography.bodySmall)
+
+                            AppTextField(
+                                value = latInput,
+                                onValueChange = { latInput = it },
+                                label = "Latitude (-90 to 90) *",
+                                placeholder = "e.g. 17.3850",
+                                leadingIcon = Icons.Default.Explore
+                            )
+
+                            AppTextField(
+                                value = lngInput,
+                                onValueChange = { lngInput = it },
+                                label = "Longitude (-180 to 180) *",
+                                placeholder = "e.g. 78.4867",
+                                leadingIcon = Icons.Default.Explore
+                            )
+
+                            AppTextField(
+                                value = addressInput,
+                                onValueChange = { addressInput = it },
+                                label = "Street Address *",
+                                placeholder = "e.g. 100 HiTech City Boulevard",
+                                leadingIcon = Icons.Default.LocationOn
+                            )
+
+                            AppTextField(
+                                value = cityInput,
+                                onValueChange = { cityInput = it },
+                                label = "City *",
+                                placeholder = "e.g. Hyderabad",
+                                leadingIcon = Icons.Default.LocationCity
+                            )
+
+                            OutlinedButton(
+                                onClick = {
+                                    latInput = "17.3850"
+                                    lngInput = "78.4867"
+                                    Toast.makeText(context, "Current GPS location fetched!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.GpsFixed, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Detect Device GPS Location")
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val lat = latInput.toDoubleOrNull()
+                                val lng = lngInput.toDoubleOrNull()
+                                if (lat == null || lng == null) {
+                                    Toast.makeText(context, "Please enter valid numeric coordinates", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                isSavingLocation = true
+                                hostViewModel?.updateHostelLocation(
+                                    latitude = lat,
+                                    longitude = lng,
+                                    address = addressInput.trim(),
+                                    city = cityInput.trim(),
+                                    onSuccess = {
+                                        isSavingLocation = false
+                                        showLocationModal = false
+                                        Toast.makeText(context, "Hostel location updated successfully!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onError = { err ->
+                                        isSavingLocation = false
+                                        Toast.makeText(context, "Update failed: $err", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                            enabled = !isSavingLocation
+                        ) {
+                            if (isSavingLocation) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Text("Save Location")
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showLocationModal = false }, enabled = !isSavingLocation) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

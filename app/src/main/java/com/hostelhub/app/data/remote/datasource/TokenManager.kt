@@ -21,6 +21,14 @@ class TokenManager @Inject constructor(
     private val _currentUserFlow = MutableStateFlow<User?>(getStoredUser())
     val currentUserFlow: StateFlow<User?> = _currentUserFlow.asStateFlow()
 
+    private val _deallocationNoticeFlow = kotlinx.coroutines.flow.MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 5)
+    val deallocationNoticeFlow: kotlinx.coroutines.flow.SharedFlow<String> = _deallocationNoticeFlow
+
+    fun notifyDeallocated(message: String = "Your hostel allocation has ended. You have been logged out.") {
+        clearSession()
+        _deallocationNoticeFlow.tryEmit(message)
+    }
+
     fun getAccessToken(): String? {
         return prefs.getString(KEY_ACCESS_TOKEN, null)
     }

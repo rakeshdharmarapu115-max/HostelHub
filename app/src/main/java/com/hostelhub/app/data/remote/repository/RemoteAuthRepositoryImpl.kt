@@ -3,17 +3,14 @@ package com.hostelhub.app.data.remote.repository
 import com.hostelhub.app.data.remote.api.AuthApi
 import com.hostelhub.app.data.remote.api.UsersApi
 import com.hostelhub.app.data.remote.datasource.TokenManager
-import com.hostelhub.app.data.remote.dto.LoginRequestDto
-import com.hostelhub.app.data.remote.dto.RefreshTokenRequestDto
-import com.hostelhub.app.data.remote.dto.RegisterAdminRequestDto
-import com.hostelhub.app.data.remote.dto.RegisterHostRequestDto
-import com.hostelhub.app.data.remote.dto.RegisterStudentRequestDto
+import com.hostelhub.app.data.remote.dto.*
 import com.hostelhub.app.domain.model.Admin
 import com.hostelhub.app.domain.model.Host
 import com.hostelhub.app.domain.model.Student
 import com.hostelhub.app.domain.model.User
 import com.hostelhub.app.domain.model.UserRole
 import com.hostelhub.app.domain.repository.AuthRepository
+import com.hostelhub.app.utils.ErrorParser
 import com.hostelhub.app.utils.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +31,7 @@ class RemoteAuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, password: String, role: UserRole): Resource<User> = withContext(Dispatchers.IO) {
         try {
-            val response = authApi.login(LoginRequestDto(email, password))
+            val response = authApi.login(LoginRequestDto(identifier = email, email = email, password = password))
             if (response.isSuccessful && response.body()?.data != null) {
                 val authData = response.body()!!.data!!
                 val user = authData.user.toDomain()
@@ -42,11 +39,89 @@ class RemoteAuthRepositoryImpl @Inject constructor(
                 tokenManager.saveUser(user)
                 Resource.Success(user)
             } else {
-                val errorMsg = response.body()?.message ?: com.hostelhub.app.utils.ErrorParser.parseErrorMessage(response, "Authentication failed")
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Authentication failed")
                 Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
-            Resource.Error(com.hostelhub.app.utils.ErrorParser.parseExceptionMessage(e, "Network error during login"))
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Network error during login"))
+        }
+    }
+
+    override suspend fun validateStudentId(studentId: String): Resource<ValidateStudentIdResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val response = authApi.validateStudentId(ValidateStudentIdRequestDto(studentId.trim()))
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!)
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Invalid Student ID")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error verifying Student ID"))
+        }
+    }
+
+    override suspend fun activateStudent(
+        studentId: String,
+        emailOrPhone: String,
+        password: String
+    ): Resource<User> = withContext(Dispatchers.IO) {
+        try {
+            val request = ActivateStudentRequestDto(
+                studentId = studentId.trim(),
+                emailOrPhone = emailOrPhone.trim(),
+                password = password
+            )
+            val response = authApi.activateStudent(request)
+            if (response.isSuccessful && response.body()?.data != null) {
+                val authData = response.body()!!.data!!
+                val user = authData.user.toDomain()
+                tokenManager.saveTokens(authData.tokens.accessToken, authData.tokens.refreshToken)
+                tokenManager.saveUser(user)
+                Resource.Success(user)
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Student activation failed")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error activating student account"))
+        }
+    }
+
+    override suspend fun forgotPassword(identifier: String): Resource<ForgotPasswordResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val response = authApi.forgotPassword(ForgotPasswordRequestDto(identifier.trim()))
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!)
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Account not found")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error requesting password reset"))
+        }
+    }
+
+    override suspend fun resetPassword(
+        identifier: String,
+        otp: String,
+        newPassword: String
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val request = ResetPasswordRequestDto(
+                identifier = identifier.trim(),
+                otp = otp.trim(),
+                newPassword = newPassword
+            )
+            val response = authApi.resetPassword(request)
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Failed to reset password")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error resetting password"))
         }
     }
 
@@ -76,11 +151,11 @@ class RemoteAuthRepositoryImpl @Inject constructor(
                 tokenManager.saveUser(user)
                 Resource.Success(user)
             } else {
-                val errorMsg = response.body()?.message ?: com.hostelhub.app.utils.ErrorParser.parseErrorMessage(response, "Registration failed")
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Registration failed")
                 Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
-            Resource.Error(com.hostelhub.app.utils.ErrorParser.parseExceptionMessage(e, "Network error during student registration"))
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Network error during student registration"))
         }
     }
 
@@ -102,11 +177,11 @@ class RemoteAuthRepositoryImpl @Inject constructor(
                 tokenManager.saveUser(user)
                 Resource.Success(user)
             } else {
-                val errorMsg = response.body()?.message ?: com.hostelhub.app.utils.ErrorParser.parseErrorMessage(response, "Host registration failed")
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Host registration failed")
                 Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
-            Resource.Error(com.hostelhub.app.utils.ErrorParser.parseExceptionMessage(e, "Network error during host registration"))
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Network error during host registration"))
         }
     }
 
@@ -128,11 +203,11 @@ class RemoteAuthRepositoryImpl @Inject constructor(
                 tokenManager.saveUser(user)
                 Resource.Success(user)
             } else {
-                val errorMsg = response.body()?.message ?: com.hostelhub.app.utils.ErrorParser.parseErrorMessage(response, "Association Head registration failed")
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Association Head registration failed")
                 Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
-            Resource.Error(com.hostelhub.app.utils.ErrorParser.parseExceptionMessage(e, "Network error during admin registration"))
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Network error during admin registration"))
         }
     }
 

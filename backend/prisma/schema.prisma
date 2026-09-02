@@ -93,6 +93,7 @@ model Student {
   bedNumber             String?   @map("bed_number")
   admissionDate         DateTime? @map("admission_date")
   status                String    @default("ACTIVE")
+  isActivated           Boolean   @default(true) @map("is_activated")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -343,6 +344,9 @@ model Payment {
   amountPaid           Float    @map("amount_paid")
   paymentMethod        String   @default("UPI") @map("payment_method")
   transactionReference String   @unique @map("transaction_reference")
+  razorpayOrderId      String?  @map("razorpay_order_id")
+  razorpayPaymentId    String?  @map("razorpay_payment_id")
+  razorpaySignature    String?  @map("razorpay_signature")
   paymentDate          DateTime @default(now()) @map("payment_date")
   receiptUrl           String?  @map("receipt_url")
   status               String   @default("SUCCESS")
@@ -357,6 +361,8 @@ model Payment {
 
   @@index([studentId])
   @@index([feeId])
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
   @@map("payments")
 }
 

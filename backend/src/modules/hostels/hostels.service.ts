@@ -130,6 +130,158 @@ export class HostelsService {
     return this.mapHostel(updated);
   }
 
+  /**
+   * Search nearby hostels based on location (latitude, longitude, radius).
+   * Calculates Haversine distance, filters, sorts by nearest first.
+   */
+  async searchNearbyHostels(params: {
+    lat?: number;
+    lng?: number;
+    radius?: number; // in kilometers, e.g. 1, 5, 10, 25, 50
+    city?: string;
+    gender?: string;
+    query?: string;
+    minRent?: number;
+    maxRent?: number;
+  }) {
+    const where: any = {};
+
+    if (params.city) {
+      where.city = { contains: params.city, mode: 'insensitive' };
+    }
+
+    if (params.gender) {
+      where.genderType = params.gender.toUpperCase() as HostelGenderType;
+    }
+
+    if (params.minRent !== undefined || params.maxRent !== undefined) {
+      where.baseMonthlyRent = {};
+      if (params.minRent !== undefined) where.baseMonthlyRent.gte = Number(params.minRent);
+      if (params.maxRent !== undefined) where.baseMonthlyRent.lte = Number(params.maxRent);
+    }
+
+    if (params.query) {
+      where.OR = [
+        { name: { contains: params.query, mode: 'insensitive' } },
+        { address: { contains: params.query, mode: 'insensitive' } },
+        { city: { contains: params.query, mode: 'insensitive' } }
+      ];
+    }
+
+    const hostels = await prisma.hostel.findMany({
+      where,
+      include: {
+        host: { select: { fullName: true, businessName: true, contactPhone: true, contactEmail: true } },
+        reviews: { orderBy: { createdAt: 'desc' }, take: 5 },
+        rooms: { select: { id: true, roomNumber: true, totalCapacity: true, occupiedCount: true, status: true, monthlyRent: true } }
+      }
+    });
+
+    const userLat = params.lat !== undefined && !isNaN(Number(params.lat)) ? Number(params.lat) : undefined;
+    const userLng = params.lng !== undefined && !isNaN(Number(params.lng)) ? Number(params.lng) : undefined;
+    const radiusKm = params.radius !== undefined && !isNaN(Number(params.radius)) ? Number(params.radius) : undefined;
+
+    const mapped = hostels.map(h => {
+      const baseHostel = this.mapHostel(h);
+      let distanceKm: number | null = null;
+
+      if (userLat !== undefined && userLng !== undefined && h.latitude && h.longitude && (h.latitude !== 0 || h.longitude !== 0)) {
+        distanceKm = this.calculateHaversineDistance(userLat, userLng, h.latitude, h.longitude);
+      }
+
+      // Calculate total available beds
+      const totalRooms = h.rooms.length;
+      const totalCapacity = h.rooms.reduce((sum, r) => sum + r.totalCapacity, 0);
+      const totalOccupied = h.rooms.reduce((sum, r) => sum + r.occupiedCount, 0);
+      const availableBeds = Math.max(0, (h.totalBeds || totalCapacity) - (h.occupiedBeds || totalOccupied));
+
+      return {
+        ...baseHostel,
+        distanceKm,
+        availableBeds,
+        availableRoomsCount: h.rooms.filter(r => r.occupiedCount < r.totalCapacity).length
+      };
+    });
+
+    // If radius is specified and user coordinates provided, filter by radius
+    let filtered = mapped;
+    if (userLat !== undefined && userLng !== undefined && radiusKm !== undefined && radiusKm > 0) {
+      filtered = mapped.filter(h => h.distanceKm !== null && h.distanceKm <= radiusKm);
+    }
+
+    // Sort by distance if available, otherwise rating
+    if (userLat !== undefined && userLng !== undefined) {
+      filtered.sort((a, b) => {
+        if (a.distanceKm !== null && b.distanceKm !== null) {
+          return a.distanceKm - b.distanceKm;
+        }
+        if (a.distanceKm !== null) return -1;
+        if (b.distanceKm !== null) return 1;
+        return b.rating - a.rating;
+      });
+    } else {
+      filtered.sort((a, b) => b.rating - a.rating);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Update hostel physical location coordinates and address.
+   */
+  async updateHostelLocation(hostelId: string, data: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    requesterHostId?: string;
+    requesterRole?: string;
+  }) {
+    if (typeof data.latitude !== 'number' || data.latitude < -90 || data.latitude > 90) {
+      throw { status: 400, message: 'Invalid latitude. Must be between -90 and 90.' };
+    }
+    if (typeof data.longitude !== 'number' || data.longitude < -180 || data.longitude > 180) {
+      throw { status: 400, message: 'Invalid longitude. Must be between -180 and 180.' };
+    }
+
+    const hostel = await prisma.hostel.findUnique({ where: { id: hostelId } });
+    if (!hostel) {
+      throw { status: 404, message: `Hostel not found for ID: ${hostelId}` };
+    }
+
+    if (data.requesterRole === 'HOST' && data.requesterHostId && hostel.hostId !== data.requesterHostId) {
+      throw { status: 403, message: 'You are not authorized to update location for this hostel.' };
+    }
+
+    const updated = await prisma.hostel.update({
+      where: { id: hostelId },
+      data: {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        ...(data.address ? { address: data.address.trim() } : {}),
+        ...(data.city ? { city: data.city.trim() } : {}),
+        ...(data.state ? { state: data.state.trim() } : {}),
+        ...(data.postalCode ? { postalCode: data.postalCode.trim() } : {})
+      }
+    });
+
+    return this.mapHostel(updated);
+  }
+
+  private calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c * 10) / 10;
+  }
+
   async addHostelImages(id: string, newImages: string[]) {
     const hostel = await prisma.hostel.findUnique({ where: { id } });
     if (!hostel) {

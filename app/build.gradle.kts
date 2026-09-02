@@ -23,13 +23,13 @@ android {
             useSupportLibrary = true
         }
 
-        val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-backend.onrender.com/api/"
+        val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-yp73.onrender.com/api/"
         buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
         debug {
-            val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-backend.onrender.com/api/"
+            val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-yp73.onrender.com/api/"
             buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
         }
         release {
@@ -38,7 +38,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-backend.onrender.com/api/"
+            val apiBaseUrl = (project.findProperty("API_BASE_URL") as? String) ?: "https://hostelhub-yp73.onrender.com/api/"
             buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
         }
     }

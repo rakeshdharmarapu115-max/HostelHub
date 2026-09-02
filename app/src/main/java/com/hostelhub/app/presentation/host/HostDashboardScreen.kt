@@ -1,23 +1,34 @@
 package com.hostelhub.app.presentation.host
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.hostelhub.app.domain.model.*
 import com.hostelhub.app.presentation.components.*
 import com.hostelhub.app.presentation.theme.*
@@ -36,6 +47,8 @@ fun HostDashboardScreen(
     onNavigateToAnnouncements: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+
     val statsState by hostViewModel?.dashboardStats?.collectAsState() ?: remember {
         mutableStateOf(UiState.Success(HostDashboardStats(
             totalRooms = 30,
@@ -51,34 +64,38 @@ fun HostDashboardScreen(
     val hostelState by hostViewModel?.hostelInfo?.collectAsState() ?: remember {
         mutableStateOf(UiState.Idle)
     }
-    val announcementsState by hostViewModel?.announcements?.collectAsState() ?: remember {
-        mutableStateOf(UiState.Idle)
-    }
 
     val stats = (statsState as? UiState.Success)?.data ?: HostDashboardStats()
-    val hostelName = (hostelState as? UiState.Success)?.data?.name ?: "Green Valley Residencies"
-    val occupancyRate = if (stats.totalBeds > 0) ((stats.occupiedBeds.toDouble() / stats.totalBeds) * 100).toInt() else 0
-    val announcementsList = (announcementsState as? UiState.Success)?.data ?: emptyList()
-    val latestCouncilDirective = announcementsList.firstOrNull {
-        it.senderRole == UserRole.ADMIN || it.targetAudience.contains("OWNER", ignoreCase = true) || it.targetAudience.contains("HOST", ignoreCase = true) || it.targetAudience == "ALL"
-    } ?: Announcement(
-        announcementId = "dir_01",
-        title = "Annual Safety & Fire Compliance Inspection 2026",
-        message = "All hostel owners and wardens are mandated to submit certified fire extinguisher audit and emergency exit clearance reports by month end.",
-        senderName = "Campus Housing Association Head",
-        senderRole = UserRole.ADMIN,
-        priority = AnnouncementPriority.URGENT,
-        targetAudience = "HOSTEL_OWNERS"
-    )
+    val hostel = (hostelState as? UiState.Success)?.data
+    val hostelName = hostel?.name ?: "Green Valley Residencies"
+    val occupancyRate = if (stats.totalBeds > 0) ((stats.occupiedBeds.toDouble() / stats.totalBeds) * 100).toInt() else 85
+
+    // Gallery Photo Picker Launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            val uriStrings = uris.map { it.toString() }
+            hostViewModel?.uploadHostelImages(
+                images = uriStrings,
+                onSuccess = {
+                    Toast.makeText(context, "Added ${uris.size} photo(s) from Gallery to Hostel Showcase!", Toast.LENGTH_LONG).show()
+                },
+                onError = { err ->
+                    Toast.makeText(context, "Upload note: $err", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(HostBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        // Host Property Header with Profile trigger
+        // 1. Clean, Simple Logo & Title Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -88,128 +105,73 @@ fun HostDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                IconButton(
-                    onClick = onNavigateToProfile,
+                Box(
                     modifier = Modifier
-                        .background(HostAccentContainer, shape = CircleShape)
                         .size(46.dp)
+                        .background(SecondaryTeal.copy(alpha = 0.12f), shape = CircleShape)
+                        .border(1.dp, SecondaryTeal.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Business,
-                        contentDescription = "Host Profile",
-                        tint = HostOnAccentContainer,
-                        modifier = Modifier.size(24.dp)
+                        contentDescription = "HostelHub Logo",
+                        tint = SecondaryTeal,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Hostel Operations",
+                        text = "HostelHub",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "$hostelName • Warden Portal",
+                        text = "Hostel Owner Portal • $hostelName",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = SecondaryTeal,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            IconButton(
-                onClick = onNavigateToAnnouncements,
-                modifier = Modifier
-                    .background(HostAccentContainer, shape = CircleShape)
-                    .size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Campaign,
-                    contentDescription = "Broadcast Notice",
-                    tint = HostOnAccentContainer
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 🏛️ Association Head Directives Banner (Highlighted for Hostel Owners)
-        AppCard(
-            padding = 16.dp,
-            backgroundColor = AdminAccentContainer.copy(alpha = 0.35f),
-            onClick = onNavigateToAnnouncements
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onNavigateToAnnouncements,
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(AdminHeroBg, shape = CircleShape),
-                    contentAlignment = Alignment.Center
+                        .background(HostAccentContainer, shape = CircleShape)
+                        .size(42.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Campaign,
-                        contentDescription = null,
-                        tint = Color.White,
+                        contentDescription = "Broadcast",
+                        tint = HostOnAccentContainer,
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "🏛️ Association Head Directive",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = AdminOnAccentContainer
-                        )
-                        StatusBadge(
-                            text = latestCouncilDirective.priority.name,
-                            statusType = when (latestCouncilDirective.priority) {
-                                AnnouncementPriority.URGENT -> BadgeStatusType.ERROR
-                                AnnouncementPriority.IMPORTANT -> BadgeStatusType.WARNING
-                                AnnouncementPriority.NORMAL -> BadgeStatusType.INFO
-                            }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = latestCouncilDirective.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = latestCouncilDirective.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "From: ${latestCouncilDirective.senderName} • Tap to view all directives →",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = AdminAccent
+                IconButton(
+                    onClick = onNavigateToProfile,
+                    modifier = Modifier
+                        .background(HostAccentContainer, shape = CircleShape)
+                        .size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Business,
+                        contentDescription = "Profile",
+                        tint = HostOnAccentContainer,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // 1. Occupancy Summary Card
+        // 2. Real-Time Occupancy Summary Card
         AppCard(
             backgroundColor = HostHeroBg,
-            padding = 20.dp,
+            padding = 18.dp,
             onClick = onNavigateToRooms
         ) {
             Row(
@@ -219,7 +181,7 @@ fun HostDashboardScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Live Hostel Occupancy Rate",
+                        text = "Real-Time Occupancy Rate",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -232,14 +194,14 @@ fun HostDashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds Filled • ${stats.availableBeds} Vacant Beds Ready",
+                        text = "${stats.occupiedBeds} / ${stats.totalBeds} Beds Filled • ${stats.availableBeds} Vacant",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = Color.White.copy(alpha = 0.85f)
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
-                    text = "Manage Rooms →",
+                    text = "Manage →",
                     statusType = BadgeStatusType.SUCCESS,
                     customBgColor = HostBadgeBg,
                     customTextColor = HostBadgeText
@@ -249,56 +211,138 @@ fun HostDashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. Key Operational Metrics (Fees, Residents, Complaints, Mess Menu)
+        // 3. Hostel Showcase Photos & Gallery Picker
+        AppCard(
+            padding = 16.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(SecondaryTeal.copy(alpha = 0.15f), shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = SecondaryTeal, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Hostel Showcase Photos",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${hostel?.images?.size ?: 0} Photos in resident catalog",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add Photo", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val displayImages = if (!hostel?.images.isNullOrEmpty()) {
+                hostel!!.images
+            } else {
+                listOf(
+                    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80"
+                )
+            }
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(displayImages) { imgUrl ->
+                    Box(
+                        modifier = Modifier
+                            .size(width = 130.dp, height = 90.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceContainer)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                    ) {
+                        AsyncImage(
+                            model = imgUrl,
+                            contentDescription = "Hostel Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+
+                item {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 100.dp, height = 90.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SecondaryTeal.copy(alpha = 0.08f))
+                            .border(1.5.dp, SecondaryTeal.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .clickable { galleryLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = SecondaryTeal, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("+ Gallery", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = SecondaryTeal)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. Key Property Stats (No Duplications)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MetricStatCard(
-                title = "Pending Fees (₹)",
-                value = if (stats.pendingFeeAmount > 0) Formatters.formatCurrencyNoDecimals(stats.pendingFeeAmount) else "₹0",
-                icon = Icons.Default.Payment,
-                subtitle = "${stats.pendingFeeCount} Invoices Due",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToFees
-            )
-            MetricStatCard(
+            HostEqualMetricCard(
                 title = "Total Residents",
                 value = "${stats.occupiedBeds} Students",
-                icon = Icons.Default.Group,
                 subtitle = "Across ${stats.totalRooms} Rooms",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToStudents
+                icon = Icons.Default.Group,
+                iconTint = SecondaryTeal,
+                iconBg = SecondaryTeal.copy(alpha = 0.15f),
+                onClick = onNavigateToStudents,
+                modifier = Modifier.weight(1f)
+            )
+            HostEqualMetricCard(
+                title = "Pending Dues",
+                value = if (stats.pendingFeeAmount > 0) Formatters.formatCurrencyNoDecimals(stats.pendingFeeAmount) else "₹0",
+                subtitle = "${stats.pendingFeeCount} Invoices Due",
+                icon = Icons.Default.Payment,
+                iconTint = PrimaryNavy,
+                iconBg = PrimaryContainer,
+                onClick = onNavigateToFees,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricStatCard(
-                title = "Maintenance",
-                value = "${stats.pendingComplaints} Tickets",
-                icon = Icons.AutoMirrored.Filled.Assignment,
-                subtitle = if (stats.pendingComplaints > 0) "Needs Attention" else "All Clear",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToComplaints
-            )
-            MetricStatCard(
-                title = "Weekly Mess Menu",
-                value = "7 Days Active",
-                icon = Icons.Default.Restaurant,
-                subtitle = "Edit & Publish",
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToMenu
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 3. Host Management Action Hub
+        // 5. Single Authoritative Management Controls Hub (Zero Duplication)
         Text(
             text = "Host Management Controls",
             style = MaterialTheme.typography.titleMedium,
@@ -311,18 +355,18 @@ fun HostDashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HostQuickActionCard(
+            HostEqualActionCard(
                 title = "Rooms & Beds",
-                subtitle = "Allocate Vacant Beds",
+                subtitle = "${stats.availableBeds} Vacant Beds",
                 icon = Icons.Default.MeetingRoom,
                 iconTint = PrimaryNavy,
                 iconBg = PrimaryContainer,
                 onClick = onNavigateToRooms,
                 modifier = Modifier.weight(1f)
             )
-            HostQuickActionCard(
-                title = "Resident Directory",
-                subtitle = "Student ID Cards",
+            HostEqualActionCard(
+                title = "Students Directory",
+                subtitle = "Residents & ID Activation",
                 icon = Icons.Default.Group,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -337,22 +381,22 @@ fun HostDashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HostQuickActionCard(
-                title = "Food Menu Editor",
-                subtitle = "Publish Daily Meals",
+            HostEqualActionCard(
+                title = "Food Menu",
+                subtitle = "Weekly Schedule",
                 icon = Icons.Default.Restaurant,
                 iconTint = TertiaryAmber,
                 iconBg = TertiaryAmber.copy(alpha = 0.15f),
                 onClick = onNavigateToMenu,
                 modifier = Modifier.weight(1f)
             )
-            HostQuickActionCard(
-                title = "Fee Invoices & Dues",
-                subtitle = "Track Payments (₹)",
-                icon = Icons.Default.Payment,
-                iconTint = PrimaryNavy,
-                iconBg = PrimaryContainer,
-                onClick = onNavigateToFees,
+            HostEqualActionCard(
+                title = "Complaint Desk",
+                subtitle = "${stats.pendingComplaints} Pending Tickets",
+                icon = Icons.AutoMirrored.Filled.Assignment,
+                iconTint = MaterialTheme.colorScheme.error,
+                iconBg = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                onClick = onNavigateToComplaints,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -363,18 +407,18 @@ fun HostDashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HostQuickActionCard(
-                title = "Complaints & Repairs",
-                subtitle = "Manage Work Orders",
-                icon = Icons.AutoMirrored.Filled.Assignment,
-                iconTint = MaterialTheme.colorScheme.error,
-                iconBg = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                onClick = onNavigateToComplaints,
+            HostEqualActionCard(
+                title = "Fees & Payments",
+                subtitle = "Invoices & History",
+                icon = Icons.Default.Payment,
+                iconTint = PrimaryNavy,
+                iconBg = PrimaryContainer,
+                onClick = onNavigateToFees,
                 modifier = Modifier.weight(1f)
             )
-            HostQuickActionCard(
-                title = "Broadcast Notice",
-                subtitle = "Notify All Residents",
+            HostEqualActionCard(
+                title = "Announcements",
+                subtitle = "Resident Broadcasts",
                 icon = Icons.Default.Campaign,
                 iconTint = SecondaryTeal,
                 iconBg = SecondaryTeal.copy(alpha = 0.15f),
@@ -383,29 +427,103 @@ fun HostDashboardScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            HostEqualActionCard(
+                title = "Daily Attendance",
+                subtitle = "${stats.todayPresent} Checked In",
+                icon = Icons.Default.FactCheck,
+                iconTint = SecondaryTeal,
+                iconBg = SecondaryTeal.copy(alpha = 0.15f),
+                onClick = onNavigateToAttendance,
+                modifier = Modifier.weight(1f)
+            )
+            HostEqualActionCard(
+                title = "Hostel Profile",
+                subtitle = "Info & Photos",
+                icon = Icons.Default.Business,
+                iconTint = PrimaryNavy,
+                iconBg = PrimaryContainer,
+                onClick = onNavigateToProfile,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
 
-        // 4. Operations Overview
-        Text(
-            text = "Facility Operations Log",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        AppCard(padding = 16.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActivityRow("Room allocation and bed assignment database synchronized", "Active", Icons.Default.CheckCircle)
-                ActivityRow("Catering food menu updated and published to residents", "Operational", Icons.Default.Restaurant)
-                ActivityRow("Hostel maintenance queue and repair tracking active", "Online", Icons.Default.Construction)
+@Composable
+private fun HostEqualMetricCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AppCard(
+        modifier = modifier
+            .height(115.dp)
+            .clickable { onClick() },
+        padding = 12.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .background(iconBg, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = iconTint,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
 }
 
 @Composable
-private fun HostQuickActionCard(
+private fun HostEqualActionCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -415,74 +533,45 @@ private fun HostQuickActionCard(
     modifier: Modifier = Modifier
 ) {
     AppCard(
-        onClick = onClick,
-        modifier = modifier,
-        padding = 14.dp
+        modifier = modifier
+            .height(90.dp)
+            .clickable { onClick() },
+        padding = 12.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .background(iconBg, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = title,
+                    contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ActivityRow(title: String, time: String, icon: ImageVector) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = SecondaryTeal,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Text(
-            text = time,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
     }
 }

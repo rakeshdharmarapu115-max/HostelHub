@@ -224,8 +224,18 @@ class StudentViewModel @Inject constructor(
     }
 
     fun loadHostels() {
+        searchNearbyHostels()
+    }
+
+    fun searchNearbyHostels(
+        lat: Double? = 17.3850,
+        lng: Double? = 78.4867,
+        radius: Double? = null,
+        city: String? = null,
+        query: String? = null
+    ) {
         viewModelScope.launch {
-            hostelRepository.getHostels().collect { res ->
+            hostelRepository.searchNearbyHostels(lat, lng, radius, city, query).collect { res ->
                 _hostels.value = when (res) {
                     is Resource.Loading -> UiState.Loading
                     is Resource.Success -> UiState.Success(res.data)
@@ -338,6 +348,57 @@ class StudentViewModel @Inject constructor(
         }
     }
 
+    fun createRazorpayOrder(
+        feeId: String,
+        amount: Double?,
+        onSuccess: (com.hostelhub.app.data.remote.dto.RazorpayOrderResponseDto) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            when (val result = feePaymentRepository.createRazorpayOrder(feeId, amount)) {
+                is Resource.Success -> onSuccess(result.data)
+                is Resource.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
+    fun verifyRazorpayPayment(
+        feeId: String,
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String?,
+        amountPaid: Double?,
+        onSuccess: (Payment) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val currentSId = _currentStudentId.value
+            when (val result = feePaymentRepository.verifyRazorpayPayment(feeId, razorpayOrderId, razorpayPaymentId, razorpaySignature, amountPaid)) {
+                is Resource.Success -> {
+                    loadFees(currentSId)
+                    loadPayments(currentSId)
+                    loadDashboardStats(currentSId)
+                    onSuccess(result.data)
+                }
+                is Resource.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
+    fun recordPaymentFailure(
+        feeId: String,
+        razorpayOrderId: String?,
+        razorpayPaymentId: String?,
+        errorMessage: String?
+    ) {
+        viewModelScope.launch {
+            feePaymentRepository.recordPaymentFailure(feeId, razorpayOrderId, razorpayPaymentId, errorMessage)
+            loadPayments(_currentStudentId.value)
+        }
+    }
+
     fun payFee(
         feeId: String,
         amount: Double,
@@ -408,6 +469,26 @@ class StudentViewModel @Inject constructor(
         viewModelScope.launch {
             notificationRepository.markAsRead(notificationId)
             loadNotifications(_currentStudentId.value)
+        }
+    }
+
+    fun createHostel(
+        hostel: Hostel,
+        onSuccess: (Hostel) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = hostelRepository.createHostel(hostel)
+            when (result) {
+                is Resource.Success -> {
+                    loadHostels()
+                    onSuccess(result.data)
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
         }
     }
 }

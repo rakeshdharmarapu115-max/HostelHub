@@ -15,11 +15,14 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.hostelhub.app.domain.model.Room
 import com.hostelhub.app.domain.model.Student
 import com.hostelhub.app.presentation.components.*
@@ -48,6 +51,102 @@ fun HostStudentManagementScreen(
 
     var selectedStudentForDetails by remember { mutableStateOf<Student?>(null) }
     var selectedStudentForAssignment by remember { mutableStateOf<Student?>(null) }
+    var selectedStudentForDeallocation by remember { mutableStateOf<Student?>(null) }
+    var deallocationRemarks by remember { mutableStateOf("") }
+    var isDeallocating by remember { mutableStateOf(false) }
+
+    var showAddStudentDialog by remember { mutableStateOf(false) }
+    var newlyCreatedStudent by remember { mutableStateOf<Student?>(null) }
+
+    // Deallocation Confirmation Dialog
+    selectedStudentForDeallocation?.let { student ->
+        AlertDialog(
+            onDismissRequest = { if (!isDeallocating) selectedStudentForDeallocation = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Confirm Student Deallocation",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Are you sure you want to deallocate ${student.fullName} (Student ID: ${student.rollNumber}) from this hostel?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("⚠️ Immediate Effects of Deallocation:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Text("• Student room and bed assignment will be released.", style = MaterialTheme.typography.bodySmall)
+                            Text("• Student status will become DEALLOCATED.", style = MaterialTheme.typography.bodySmall)
+                            Text("• All active login sessions on student devices will be terminated immediately.", style = MaterialTheme.typography.bodySmall)
+                            Text("• Further student portal access will be denied.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+
+                    AppTextField(
+                        value = deallocationRemarks,
+                        onValueChange = { deallocationRemarks = it },
+                        label = "Deallocation Remarks (Optional)",
+                        placeholder = "e.g. Course completed / Vacated room"
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isDeallocating = true
+                        hostViewModel?.deallocateStudent(
+                            studentId = student.studentId.ifBlank { student.userId },
+                            remarks = deallocationRemarks.ifBlank { "Deallocated by Hostel Administration" },
+                            onSuccess = {
+                                isDeallocating = false
+                                selectedStudentForDeallocation = null
+                                selectedStudentForDetails = null
+                                deallocationRemarks = ""
+                                Toast.makeText(context, "${student.fullName} has been deallocated.", Toast.LENGTH_LONG).show()
+                            },
+                            onError = { err ->
+                                isDeallocating = false
+                                Toast.makeText(context, "Deallocation failed: $err", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    enabled = !isDeallocating
+                ) {
+                    if (isDeallocating) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Confirm Deallocation")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { selectedStudentForDeallocation = null },
+                    enabled = !isDeallocating
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     val filteredList = allResidents.filter { student ->
         val matchesSearch = searchQuery.isBlank() ||
@@ -70,6 +169,15 @@ fun HostStudentManagementScreen(
                 title = "Resident Students Directory",
                 canNavigateBack = true,
                 onNavigateBack = onNavigateBack
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAddStudentDialog = true },
+                containerColor = PrimaryNavy,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.PersonAdd, contentDescription = "Add Student") },
+                text = { Text("Add Student", fontWeight = FontWeight.Bold) }
             )
         }
     ) { paddingValues ->
@@ -195,6 +303,10 @@ fun HostStudentManagementScreen(
             onAssignRoomClick = {
                 selectedStudentForDetails = null
                 selectedStudentForAssignment = student
+            },
+            onDeallocateClick = {
+                selectedStudentForDetails = null
+                selectedStudentForDeallocation = student
             }
         )
     }
@@ -222,6 +334,42 @@ fun HostStudentManagementScreen(
             }
         )
     }
+
+    // Add Student & Issue ID Dialog
+    if (showAddStudentDialog && hostViewModel != null) {
+        AddStudentDialog(
+            hostViewModel = hostViewModel,
+            rooms = allRooms,
+            onDismiss = { showAddStudentDialog = false },
+            onStudentCreated = { createdStudent ->
+                showAddStudentDialog = false
+                newlyCreatedStudent = createdStudent
+            }
+        )
+    }
+
+    // Student ID Created & Share Card Dialog
+    newlyCreatedStudent?.let { student ->
+        StudentIdIssuedDialog(
+            student = student,
+            onDismiss = { newlyCreatedStudent = null },
+            onCopy = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val shareText = """
+                    🏨 HOSTEL ALLOCATION CREDENTIALS
+                    Student Name: ${student.fullName}
+                    Unique Student ID: ${student.rollNumber}
+                    Hostel: ${student.hostelName ?: "Campus Hostel"}
+                    Room: ${student.roomNumber ?: "Unallocated"}
+                    
+                    Please open HostelHub -> Register -> Student Registration, enter your Unique Student ID (${student.rollNumber}), and set your personal password.
+                """.trimIndent()
+                val clip = ClipData.newPlainText("Student ID", shareText)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, "Student ID copied to clipboard!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 }
 
 @Composable
@@ -229,7 +377,8 @@ private fun StudentIdCardDialog(
     student: Student,
     onDismiss: () -> Unit,
     onCopyCredentials: () -> Unit,
-    onAssignRoomClick: () -> Unit
+    onAssignRoomClick: () -> Unit,
+    onDeallocateClick: () -> Unit
 ) {
     val hasRoom = !student.roomNumber.isNullOrBlank()
 
@@ -279,6 +428,12 @@ private fun StudentIdCardDialog(
                             value = if (hasRoom) "Room ${student.roomNumber} (${student.bedNumber ?: "Bed A"})" else "Unallocated",
                             isWarning = !hasRoom
                         )
+                        StudentIdInfoRow(
+                            label = "Account Status",
+                            value = student.status.name,
+                            isHighlight = student.status.name == "ACTIVE" || student.status.name == "ALLOCATED",
+                            isWarning = student.status.name == "DEALLOCATED"
+                        )
                     }
                 }
 
@@ -292,6 +447,16 @@ private fun StudentIdCardDialog(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Assign Room & Bed Now")
                     }
+                }
+
+                OutlinedButton(
+                    onClick = onDeallocateClick,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Deallocate Student from Hostel", color = MaterialTheme.colorScheme.error)
                 }
             }
         },
@@ -411,3 +576,348 @@ private fun AssignStudentToRoomDialog(
         }
     )
 }
+
+@Composable
+private fun AddStudentDialog(
+    hostViewModel: HostViewModel,
+    rooms: List<Room>,
+    onDismiss: () -> Unit,
+    onStudentCreated: (Student) -> Unit
+) {
+    val context = LocalContext.current
+    var fullName by remember { mutableStateOf("") }
+    var generatedStudentId by remember { mutableStateOf("") }
+    var collegeName by remember { mutableStateOf("") }
+    var course by remember { mutableStateOf("") }
+    var yearOfStudy by remember { mutableStateOf("1st Year") }
+    var mobilePhone by remember { mutableStateOf("") }
+    var selectedRoom by remember { mutableStateOf<Room?>(null) }
+    var selectedBed by remember { mutableStateOf<com.hostelhub.app.domain.model.Bed?>(null) }
+
+    var isGeneratingId by remember { mutableStateOf(true) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var formError by remember { mutableStateOf<String?>(null) }
+
+    // Fetch next unique Student ID on launch
+    LaunchedEffect(Unit) {
+        isGeneratingId = true
+        hostViewModel.generateStudentId { nextId ->
+            generatedStudentId = nextId
+            isGeneratingId = false
+        }
+    }
+
+    val availableRooms = rooms.filter { it.occupiedCount < it.totalCapacity }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(PrimaryContainer, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, tint = PrimaryNavy, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(text = "Add Student to Hostel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = "Issues a unique, verifiable Student ID", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Generated Unique Student ID Showcase
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = PrimaryNavy.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryNavy.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = "GENERATED STUDENT ID", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+                            if (isGeneratingId) {
+                                Text(text = "Generating unique ID...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                Text(text = generatedStudentId, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = PrimaryNavy)
+                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                isGeneratingId = true
+                                hostViewModel.generateStudentId { nextId ->
+                                    generatedStudentId = nextId
+                                    isGeneratingId = false
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Regenerate ID", tint = PrimaryNavy)
+                        }
+                    }
+                }
+
+                formError?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+
+                AppTextField(
+                    value = fullName,
+                    onValueChange = { fullName = it; formError = null },
+                    label = "Student Full Name *",
+                    placeholder = "e.g. Alex Mercer"
+                )
+
+                AppTextField(
+                    value = collegeName,
+                    onValueChange = { collegeName = it; formError = null },
+                    label = "College / University Name *",
+                    placeholder = "e.g. Institute of Technology"
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        AppTextField(
+                            value = course,
+                            onValueChange = { course = it; formError = null },
+                            label = "Course *",
+                            placeholder = "e.g. B.Tech CS"
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        AppTextField(
+                            value = yearOfStudy,
+                            onValueChange = { yearOfStudy = it },
+                            label = "Year",
+                            placeholder = "e.g. 1st Year"
+                        )
+                    }
+                }
+
+                AppTextField(
+                    value = mobilePhone,
+                    onValueChange = { mobilePhone = it; formError = null },
+                    label = "Mobile Phone Number *",
+                    placeholder = "e.g. 9876543210"
+                )
+
+                // Optional Room Picker
+                if (availableRooms.isNotEmpty()) {
+                    Text(text = "Assign Room (Optional):", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        availableRooms.take(4).forEach { room ->
+                            val isSelected = selectedRoom?.roomId == room.roomId
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (isSelected) {
+                                        selectedRoom = null
+                                        selectedBed = null
+                                    } else {
+                                        selectedRoom = room
+                                        selectedBed = room.beds.firstOrNull { !it.isOccupied }
+                                    }
+                                },
+                                label = { Text("Room ${room.roomNumber}") }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmedName = fullName.trim()
+                    val trimmedCollege = collegeName.trim()
+                    val trimmedCourse = course.trim()
+                    val trimmedPhone = mobilePhone.trim()
+
+                    if (trimmedName.isBlank()) {
+                        formError = "Student Full Name is required."
+                        return@Button
+                    }
+                    if (trimmedCollege.isBlank()) {
+                        formError = "College / University Name is required."
+                        return@Button
+                    }
+                    if (trimmedCourse.isBlank()) {
+                        formError = "Course name is required."
+                        return@Button
+                    }
+                    if (trimmedPhone.isBlank()) {
+                        formError = "Mobile Phone Number is required."
+                        return@Button
+                    }
+                    val cleanDigits = trimmedPhone.filter { it.isDigit() || it == '+' }
+                    if (cleanDigits.length < 7 || cleanDigits.length > 15) {
+                        formError = "Please enter a valid mobile phone number."
+                        return@Button
+                    }
+                    if (generatedStudentId.isBlank()) {
+                        formError = "Please wait for Student ID generation."
+                        return@Button
+                    }
+
+                    isSubmitting = true
+                    formError = null
+
+                    val newStudent = Student(
+                        studentId = "",
+                        userId = "",
+                        fullName = trimmedName,
+                        rollNumber = generatedStudentId.trim(),
+                        email = "${generatedStudentId.trim().lowercase()}@campus.edu",
+                        emergencyContactPhone = cleanDigits,
+                        collegeName = trimmedCollege,
+                        course = trimmedCourse,
+                        yearOfStudy = yearOfStudy.trim().ifBlank { "1st Year" },
+                        gender = "Male",
+                        permanentAddress = "Campus Resident",
+                        emergencyContactName = "Parent/Guardian",
+                        hostelId = "",
+                        roomId = selectedRoom?.roomId,
+                        roomNumber = selectedRoom?.roomNumber,
+                        bedNumber = selectedBed?.bedNumber,
+                        status = com.hostelhub.app.domain.model.StudentStatus.ACTIVE
+                    )
+
+                    hostViewModel.addStudentByOwner(
+                        student = newStudent,
+                        onSuccess = { created ->
+                            isSubmitting = false
+                            onStudentCreated(created)
+                        },
+                        onError = { errMsg ->
+                            isSubmitting = false
+                            formError = errMsg
+                        }
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy),
+                enabled = !isSubmitting && !isGeneratingId
+            ) {
+                if (isSubmitting) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        Text("Creating Student...")
+                    }
+                } else {
+                    Text("Issue ID & Add Student")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isSubmitting
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun StudentIdIssuedDialog(
+    student: Student,
+    onDismiss: () -> Unit,
+    onCopy: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SecondaryTeal, modifier = Modifier.size(44.dp))
+        },
+        title = {
+            Text(
+                text = "Student ID Issued Successfully!",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "The unique Student ID has been generated and stored in the database. Share this ID with the student so they can register and create their personal password.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = PrimaryNavy.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryNavy.copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(text = "STUDENT ID", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+                        Text(
+                            text = student.rollNumber,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = PrimaryNavy
+                        )
+                        Text(
+                            text = student.fullName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!student.roomNumber.isNullOrBlank()) {
+                            Text(
+                                text = "Room: ${student.roomNumber}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SecondaryTeal
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onCopy,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
+            ) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Copy Student ID")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
+}
+

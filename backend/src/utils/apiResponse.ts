@@ -15,10 +15,11 @@ export function sendSuccess<T>(res: Response, message: string = 'Success', data?
   });
 }
 
-export function sendError(res: Response, message: string = 'An error occurred', statusCode: number = 500, errors?: any[]) {
+export function sendError(res: Response, message: string = 'An error occurred', statusCode: number = 500, errors?: any[], code?: string) {
   return res.status(statusCode).json({
     success: false,
     message,
+    code,
     errors: errors || []
   });
 }

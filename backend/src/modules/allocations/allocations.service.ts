@@ -67,26 +67,35 @@ export class AllocationsService {
       }
 
       // 3. Verify / Find Student
+      const cleanStudentId = data.studentId.trim();
       let student = await tx.student.findFirst({
         where: {
           OR: [
-            { id: data.studentId },
-            { userId: data.studentId },
-            { rollNumber: data.studentId },
-            { user: { email: data.studentId } }
+            { id: cleanStudentId },
+            { userId: cleanStudentId },
+            { rollNumber: cleanStudentId },
+            { rollNumber: { equals: cleanStudentId, mode: 'insensitive' } },
+            { user: { id: cleanStudentId } },
+            { user: { email: cleanStudentId } },
+            { user: { phoneNumber: cleanStudentId } },
+            { emergencyContactPhone: cleanStudentId }
           ]
-        }
+        },
+        include: { user: true }
       });
 
       if (!student) {
         // Auto-create student record if owner entered a new student
-        const email = data.studentId.includes('@')
-          ? data.studentId
-          : `student_${Date.now()}@hostelhub.local`;
+        const email = cleanStudentId.includes('@')
+          ? cleanStudentId
+          : `student_${Date.now().toString().slice(-6)}@campus.edu`;
+
+        const existingUser = await tx.user.findUnique({ where: { email } });
+        const finalEmail = existingUser ? `student_${Date.now()}@campus.edu` : email;
         
         const user = await tx.user.create({
           data: {
-            email,
+            email: finalEmail,
             passwordHash: '$2b$10$epRswTFs9lPoEx5644EumeGgkNVP5smwa.88JmR4lT3gH8m',
             fullName: data.studentName || 'Resident Student',
             role: 'STUDENT',
@@ -94,10 +103,17 @@ export class AllocationsService {
           }
         });
 
+        // Ensure rollNumber is unique
+        let rollNumber = cleanStudentId;
+        const existingRoll = await tx.student.findUnique({ where: { rollNumber } });
+        if (existingRoll) {
+          rollNumber = `STU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+
         student = await tx.student.create({
           data: {
             userId: user.id,
-            rollNumber: data.studentId,
+            rollNumber,
             fullName: data.studentName || 'Resident Student',
             collegeName: 'Campus Institute',
             course: 'General',
@@ -108,8 +124,13 @@ export class AllocationsService {
             emergencyContactPhone: '9876543210',
             status: StudentStatus.ACTIVE,
             admissionDate: new Date()
-          }
+          },
+          include: { user: true }
         });
+      }
+
+      if (!student) {
+        throw { status: 404, message: `Student not found for identifier: ${cleanStudentId}` };
       }
 
       // 4. Handle previous allocations (transfer cleanly)
@@ -155,6 +176,12 @@ export class AllocationsService {
       const hostel = await tx.hostel.findUnique({ where: { id: hostelId } });
 
       // 5. Create RoomAllocation record
+      let verifiedAllocatedBy: string | null = null;
+      if (data.allocatedBy) {
+        const u = await tx.user.findUnique({ where: { id: data.allocatedBy } });
+        if (u) verifiedAllocatedBy = u.id;
+      }
+
       const allocation = await tx.roomAllocation.create({
         data: {
           bedId: bed.id,
@@ -163,7 +190,7 @@ export class AllocationsService {
           studentId: student.id,
           status: AllocationStatus.ACTIVE,
           checkInDate: new Date(),
-          allocatedBy: data.allocatedBy,
+          allocatedBy: verifiedAllocatedBy,
           remarks: data.remarks || 'Allocated via HostelHub'
         }
       });

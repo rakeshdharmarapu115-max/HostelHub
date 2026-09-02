@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class ThemeMode {
+    LIGHT,
+    DARK,
+    SYSTEM_DEFAULT
+}
+
 @Singleton
 class AppSettingsManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -16,7 +22,23 @@ class AppSettingsManager @Inject constructor(
     private val prefs: SharedPreferences =
         context.getSharedPreferences("hostelhub_app_settings", Context.MODE_PRIVATE)
 
-    private val _isDarkMode = MutableStateFlow(prefs.getBoolean(KEY_DARK_MODE, false))
+    private val initialThemeMode = try {
+        val saved = prefs.getString(KEY_THEME_MODE, null)
+        if (saved != null) {
+            ThemeMode.valueOf(saved)
+        } else if (prefs.contains(KEY_DARK_MODE)) {
+            if (prefs.getBoolean(KEY_DARK_MODE, false)) ThemeMode.DARK else ThemeMode.LIGHT
+        } else {
+            ThemeMode.SYSTEM_DEFAULT
+        }
+    } catch (e: Exception) {
+        ThemeMode.SYSTEM_DEFAULT
+    }
+
+    private val _themeMode = MutableStateFlow(initialThemeMode)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _isDarkMode = MutableStateFlow(initialThemeMode == ThemeMode.DARK)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     private val _pushNotifications = MutableStateFlow(prefs.getBoolean(KEY_PUSH_NOTIFICATIONS, true))
@@ -31,9 +53,14 @@ class AppSettingsManager @Inject constructor(
     private val _emergencyAlerts = MutableStateFlow(prefs.getBoolean(KEY_EMERGENCY_ALERTS, true))
     val emergencyAlerts: StateFlow<Boolean> = _emergencyAlerts.asStateFlow()
 
+    fun setThemeMode(mode: ThemeMode) {
+        prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
+        _themeMode.value = mode
+        _isDarkMode.value = mode == ThemeMode.DARK
+    }
+
     fun setDarkMode(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply()
-        _isDarkMode.value = enabled
+        setThemeMode(if (enabled) ThemeMode.DARK else ThemeMode.LIGHT)
     }
 
     fun setPushNotifications(enabled: Boolean) {
@@ -57,6 +84,7 @@ class AppSettingsManager @Inject constructor(
     }
 
     companion object {
+        private const val KEY_THEME_MODE = "pref_theme_mode"
         private const val KEY_DARK_MODE = "pref_dark_mode"
         private const val KEY_PUSH_NOTIFICATIONS = "pref_push_notifications"
         private const val KEY_FEE_REMINDERS = "pref_fee_reminders"

@@ -29,6 +29,8 @@ data class HostelDto(
     @SerializedName("ratingCount") val ratingCount: Int = 0,
     @SerializedName("contactEmail") val contactEmail: String = "",
     @SerializedName("contactPhone") val contactPhone: String = "",
+    @SerializedName("distanceKm") val distanceKm: Double? = null,
+    @SerializedName("availableBeds") val availableBeds: Int? = null,
     @SerializedName("createdAt") val createdAt: Long = System.currentTimeMillis(),
     @SerializedName("reviews") val reviews: List<HostelReviewDto> = emptyList()
 ) {
@@ -62,6 +64,8 @@ data class HostelDto(
             ratingCount = ratingCount,
             contactEmail = contactEmail,
             contactPhone = contactPhone,
+            distanceKm = distanceKm,
+            availableBeds = availableBeds,
             createdAt = createdAt,
             reviews = reviews.map { it.toDomain() }
         )

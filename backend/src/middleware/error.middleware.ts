@@ -32,6 +32,15 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     return;
   }
 
+  // 4. Prisma Foreign Key Constraint Violation (P2003)
+  if (err?.code === 'P2003') {
+    const field = err.meta?.field_name || 'referenced entity';
+    sendError(res, `Invalid reference: ${field} does not exist.`, 400, [
+      { path: field, message: `Foreign key constraint violated on ${field}` }
+    ]);
+    return;
+  }
+
   // 4. JWT Authentication / Token Errors
   if (err?.name === 'JsonWebTokenError') {
     sendError(res, 'Invalid authentication token. Please log in again.', 401);
@@ -56,6 +65,6 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   const statusCode = err.status || err.statusCode || 500;
   const message = err.message || 'Internal server error';
 
-  sendError(res, message, statusCode, err.errors);
+  sendError(res, message, statusCode, err.errors, err.code);
 }
 

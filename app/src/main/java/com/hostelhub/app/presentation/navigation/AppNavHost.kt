@@ -38,6 +38,18 @@ fun AppNavHost(
     val hostViewModel: HostViewModel = hiltViewModel()
     val adminViewModel: AdminViewModel = hiltViewModel()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Global listener for automatic deallocation logout
+    LaunchedEffect(Unit) {
+        authViewModel.deallocationNoticeFlow.collect { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     val isStudentBottomNavRoute = currentRoute in listOf(
         Screen.StudentDashboard.route,
         Screen.MyRoom.route,
@@ -142,7 +154,7 @@ fun AppNavHost(
                             }
                         },
                         onNavigateToRoleSelection = {
-                            navController.navigate(Screen.RoleSelection.route) {
+                            navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.Splash.route) { inclusive = true }
                             }
                         }
@@ -153,8 +165,13 @@ fun AppNavHost(
                     RoleSelectionScreen(
                         onRoleSelected = { role ->
                             selectedRole = role
-                            navController.navigate(Screen.Login.route)
+                            when (role) {
+                                UserRole.STUDENT -> navController.navigate(Screen.StudentRegister.route)
+                                UserRole.HOST -> navController.navigate(Screen.HostRegister.route)
+                                UserRole.ADMIN -> navController.navigate(Screen.AdminRegister.route)
+                            }
                         },
+                        onNavigateBack = { navController.popBackStack() },
                         onNavigateToHostelDiscovery = {
                             navController.navigate(Screen.HostelDiscovery.route)
                         }
@@ -166,30 +183,20 @@ fun AppNavHost(
                         selectedRole = selectedRole,
                         authViewModel = authViewModel,
                         onLoginSuccess = { role ->
-                            when (role) {
-                                UserRole.STUDENT -> {
-                                    navController.navigate(Screen.StudentDashboard.route) {
-                                        popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                    }
-                                }
-                                UserRole.HOST -> {
-                                    navController.navigate(Screen.HostDashboard.route) {
-                                        popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                    }
-                                }
-                                UserRole.ADMIN -> {
-                                    navController.navigate(Screen.AdminDashboard.route) {
-                                        popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                    }
-                                }
+                            val targetRoute = when (role) {
+                                UserRole.STUDENT -> Screen.StudentDashboard.route
+                                UserRole.HOST -> Screen.HostDashboard.route
+                                UserRole.ADMIN -> Screen.AdminDashboard.route
+                            }
+                            navController.navigate(targetRoute) {
+                                popUpTo(0) { inclusive = true }
                             }
                         },
-                        onNavigateToRegister = { role ->
-                            when (role) {
-                                UserRole.STUDENT -> navController.navigate(Screen.StudentRegister.route)
-                                UserRole.HOST -> navController.navigate(Screen.HostRegister.route)
-                                UserRole.ADMIN -> navController.navigate(Screen.AdminRegister.route)
-                            }
+                        onNavigateToRegister = { _ ->
+                            navController.navigate(Screen.RoleSelection.route)
+                        },
+                        onNavigateToDiscovery = {
+                            navController.navigate(Screen.HostelDiscovery.route)
                         },
                         onNavigateBack = { navController.popBackStack() }
                     )
@@ -200,10 +207,14 @@ fun AppNavHost(
                         authViewModel = authViewModel,
                         onRegistrationSuccess = {
                             navController.navigate(Screen.StudentDashboard.route) {
-                                popUpTo(Screen.RoleSelection.route) { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         },
-                        onNavigateToLogin = { navController.popBackStack() },
+                        onNavigateToLogin = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -213,10 +224,14 @@ fun AppNavHost(
                         authViewModel = authViewModel,
                         onRegistrationSuccess = {
                             navController.navigate(Screen.HostDashboard.route) {
-                                popUpTo(Screen.RoleSelection.route) { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         },
-                        onNavigateToLogin = { navController.popBackStack() },
+                        onNavigateToLogin = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -226,10 +241,14 @@ fun AppNavHost(
                         authViewModel = authViewModel,
                         onRegistrationSuccess = {
                             navController.navigate(Screen.AdminDashboard.route) {
-                                popUpTo(Screen.RoleSelection.route) { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         },
-                        onNavigateToLogin = { navController.popBackStack() },
+                        onNavigateToLogin = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -332,7 +351,7 @@ fun AppNavHost(
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                         onLogout = {
                             authViewModel.logout {
-                                navController.navigate(Screen.RoleSelection.route) {
+                                navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             }
@@ -446,7 +465,7 @@ fun AppNavHost(
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                         onLogout = {
                             authViewModel.logout {
-                                navController.navigate(Screen.RoleSelection.route) {
+                                navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             }
@@ -501,7 +520,7 @@ fun AppNavHost(
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                         onLogout = {
                             authViewModel.logout {
-                                navController.navigate(Screen.RoleSelection.route) {
+                                navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             }

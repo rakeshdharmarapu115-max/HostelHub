@@ -22,6 +22,18 @@ interface StudentApi {
     @DELETE("students/{id}")
     suspend fun deleteStudent(@Path("id") id: String): Response<ApiResponse<Unit>>
 
+    @GET("students/generate-id")
+    suspend fun generateStudentId(): Response<ApiResponse<Map<String, String>>>
+
+    @POST("students/admin-create")
+    suspend fun createStudentByAdmin(@Body request: Map<String, @JvmSuppressWildcards Any>): Response<ApiResponse<Map<String, Any>>>
+
+    @POST("students")
+    suspend fun createStudentDirect(@Body request: Map<String, @JvmSuppressWildcards Any>): Response<ApiResponse<Map<String, Any>>>
+
+    @POST("students/{id}/deallocate")
+    suspend fun deallocateStudent(@Path("id") id: String, @Body body: Map<String, String> = emptyMap()): Response<ApiResponse<StudentDto>>
+
     @GET("dashboard/student")
     suspend fun getStudentDashboardStats(@Query("studentId") studentId: String): Response<ApiResponse<StudentDashboardStatsDto>>
 }

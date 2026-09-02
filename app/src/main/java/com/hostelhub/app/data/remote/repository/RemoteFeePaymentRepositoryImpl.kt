@@ -1,11 +1,11 @@
 package com.hostelhub.app.data.remote.repository
 
 import com.hostelhub.app.data.remote.api.FeePaymentApi
-import com.hostelhub.app.data.remote.dto.CreateFeeRequestDto
-import com.hostelhub.app.data.remote.dto.RecordPaymentRequestDto
+import com.hostelhub.app.data.remote.dto.*
 import com.hostelhub.app.domain.model.Fee
 import com.hostelhub.app.domain.model.Payment
 import com.hostelhub.app.domain.repository.FeePaymentRepository
+import com.hostelhub.app.utils.ErrorParser
 import com.hostelhub.app.utils.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -94,6 +94,86 @@ class RemoteFeePaymentRepositoryImpl @Inject constructor(
             emit(Resource.Error(e.message ?: "Network error fetching hostel payment history"))
         }
     }.flowOn(Dispatchers.IO)
+
+    override fun getTransactionHistory(): Flow<Resource<List<Payment>>> = flow {
+        emit(Resource.Loading)
+        try {
+            val response = feePaymentApi.getTransactionHistory()
+            if (response.isSuccessful && response.body()?.data != null) {
+                val list = response.body()!!.data!!.map { it.toDomain() }
+                emit(Resource.Success(list))
+            } else {
+                emit(Resource.Error(response.body()?.message ?: "Failed to fetch transaction history"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Network error fetching transaction history"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun createRazorpayOrder(feeId: String, amount: Double?): Resource<RazorpayOrderResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val response = feePaymentApi.createRazorpayOrder(CreateRazorpayOrderRequestDto(feeId, amount))
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!)
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Failed to initiate Razorpay order")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error creating Razorpay order"))
+        }
+    }
+
+    override suspend fun verifyRazorpayPayment(
+        feeId: String,
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String?,
+        amountPaid: Double?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        try {
+            val request = VerifyRazorpayPaymentRequestDto(
+                feeId = feeId,
+                razorpayOrderId = razorpayOrderId,
+                razorpayPaymentId = razorpayPaymentId,
+                razorpaySignature = razorpaySignature,
+                amountPaid = amountPaid
+            )
+            val response = feePaymentApi.verifyRazorpayPayment(request)
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!.toDomain())
+            } else {
+                val errorMsg = response.body()?.message ?: ErrorParser.parseErrorMessage(response, "Payment verification failed")
+                Resource.Error(errorMsg)
+            }
+        } catch (e: Exception) {
+            Resource.Error(ErrorParser.parseExceptionMessage(e, "Error verifying payment with server"))
+        }
+    }
+
+    override suspend fun recordPaymentFailure(
+        feeId: String,
+        razorpayOrderId: String?,
+        razorpayPaymentId: String?,
+        errorMessage: String?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        try {
+            val request = RecordPaymentFailureRequestDto(
+                feeId = feeId,
+                razorpayOrderId = razorpayOrderId,
+                razorpayPaymentId = razorpayPaymentId,
+                errorMessage = errorMessage
+            )
+            val response = feePaymentApi.recordPaymentFailure(request)
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!.toDomain())
+            } else {
+                Resource.Error("Failed to record payment cancellation")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error recording failure")
+        }
+    }
 
     override suspend fun recordPayment(payment: Payment): Resource<Payment> = withContext(Dispatchers.IO) {
         try {

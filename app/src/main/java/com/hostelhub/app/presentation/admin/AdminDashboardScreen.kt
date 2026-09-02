@@ -1,6 +1,7 @@
 package com.hostelhub.app.presentation.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -78,7 +79,7 @@ fun AdminDashboardScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        // 1. Association Head Header with Profile & Quick Directive trigger
+        // 1. Clean, Simple Logo & Title Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -88,47 +89,64 @@ fun AdminDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                IconButton(
-                    onClick = onNavigateToProfile,
+                Box(
                     modifier = Modifier
-                        .background(AdminAccentContainer, shape = CircleShape)
                         .size(46.dp)
+                        .background(AdminAccent.copy(alpha = 0.12f), shape = CircleShape)
+                        .border(1.dp, AdminAccent.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SupervisorAccount,
-                        contentDescription = "Association Head Profile",
-                        tint = AdminOnAccentContainer,
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Default.AccountBalance,
+                        contentDescription = "HostelHub Logo",
+                        tint = AdminAccent,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Campus Housing Association",
+                        text = "HostelHub",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Association Head • Multi-Hostel Governance",
+                        text = "Campus Housing Association • Multi-Hostel",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AdminAccent,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            IconButton(
-                onClick = { showBroadcastModal = true },
-                modifier = Modifier
-                    .background(AdminAccentContainer, shape = CircleShape)
-                    .size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Campaign,
-                    contentDescription = "Broadcast Directive",
-                    tint = AdminOnAccentContainer
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = { showBroadcastModal = true },
+                    modifier = Modifier
+                        .background(AdminAccentContainer, shape = CircleShape)
+                        .size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Campaign,
+                        contentDescription = "Broadcast",
+                        tint = AdminOnAccentContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onNavigateToProfile,
+                    modifier = Modifier
+                        .background(AdminAccentContainer, shape = CircleShape)
+                        .size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SupervisorAccount,
+                        contentDescription = "Profile",
+                        tint = AdminOnAccentContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
 
@@ -942,8 +960,8 @@ private fun AdminQuickAction(
 ) {
     AppCard(
         onClick = onClick,
-        modifier = modifier,
-        padding = 14.dp
+        modifier = modifier.height(105.dp),
+        padding = 12.dp
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

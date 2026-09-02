@@ -52,6 +52,96 @@ class RemoteHostelRepositoryImpl @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
+    override fun searchNearbyHostels(
+        lat: Double?,
+        lng: Double?,
+        radius: Double?,
+        city: String?,
+        query: String?
+    ): Flow<Resource<List<Hostel>>> = flow {
+        emit(Resource.Loading)
+        try {
+            val response = hostelApi.searchNearbyHostels(
+                lat = lat,
+                lng = lng,
+                radius = radius,
+                city = city,
+                query = query
+            )
+            if (response.isSuccessful && response.body()?.data != null) {
+                val list = response.body()!!.data!!.map { it.toDomain() }
+                emit(Resource.Success(list))
+            } else {
+                emit(Resource.Error(response.body()?.message ?: "Failed to search nearby hostels"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Network error searching hostels"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun updateHostelLocation(
+        hostelId: String,
+        latitude: Double,
+        longitude: Double,
+        address: String,
+        city: String
+    ): Resource<Hostel> = withContext(Dispatchers.IO) {
+        try {
+            val payload = mapOf(
+                "latitude" to latitude,
+                "longitude" to longitude,
+                "address" to address,
+                "city" to city
+            )
+            val response = hostelApi.updateHostelLocation(hostelId, payload)
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!.toDomain())
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to update hostel location")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error updating location")
+        }
+    }
+
+    override suspend fun createHostel(hostel: Hostel): Resource<Hostel> = withContext(Dispatchers.IO) {
+        try {
+            val dto = HostelDto(
+                hostelId = hostel.hostelId,
+                hostId = hostel.hostId,
+                name = hostel.name,
+                address = hostel.address,
+                city = hostel.city,
+                state = hostel.state,
+                postalCode = hostel.postalCode,
+                latitude = hostel.latitude,
+                longitude = hostel.longitude,
+                description = hostel.description,
+                genderType = hostel.genderType.name,
+                amenities = hostel.amenities,
+                rules = hostel.rules,
+                images = hostel.images,
+                totalRooms = hostel.totalRooms,
+                totalBeds = hostel.totalBeds,
+                occupiedBeds = hostel.occupiedBeds,
+                baseMonthlyRent = hostel.baseMonthlyRent,
+                cautionDeposit = hostel.cautionDeposit,
+                rating = hostel.rating,
+                ratingCount = hostel.ratingCount,
+                contactEmail = hostel.contactEmail,
+                contactPhone = hostel.contactPhone
+            )
+            val response = hostelApi.createHostel(dto)
+            if (response.isSuccessful && response.body()?.data != null) {
+                Resource.Success(response.body()!!.data!!.toDomain())
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to upload hostel details")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error creating hostel")
+        }
+    }
+
     override suspend fun updateHostel(hostel: Hostel): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
             val dto = HostelDto(

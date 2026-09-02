@@ -5,8 +5,50 @@ import com.hostelhub.app.domain.model.User
 import com.hostelhub.app.domain.model.UserRole
 
 data class LoginRequestDto(
-    @SerializedName("email") val email: String,
+    @SerializedName("identifier") val identifier: String? = null,
+    @SerializedName("email") val email: String? = null,
     @SerializedName("password") val password: String
+)
+
+data class ValidateStudentIdRequestDto(
+    @SerializedName("studentId") val studentId: String
+)
+
+data class ValidateStudentIdResponseDto(
+    @SerializedName("valid") val valid: Boolean = false,
+    @SerializedName("studentId") val studentId: String = "",
+    @SerializedName("rollNumber") val rollNumber: String = "",
+    @SerializedName("fullName") val fullName: String = "",
+    @SerializedName("collegeName") val collegeName: String = "",
+    @SerializedName("course") val course: String = "",
+    @SerializedName("yearOfStudy") val yearOfStudy: String = "1",
+    @SerializedName("hostelId") val hostelId: String? = null,
+    @SerializedName("hostelName") val hostelName: String? = null,
+    @SerializedName("roomNumber") val roomNumber: String? = null,
+    @SerializedName("isActivated") val isActivated: Boolean = false
+)
+
+data class ActivateStudentRequestDto(
+    @SerializedName("studentId") val studentId: String,
+    @SerializedName("emailOrPhone") val emailOrPhone: String,
+    @SerializedName("password") val password: String
+)
+
+data class ForgotPasswordRequestDto(
+    @SerializedName("identifier") val identifier: String
+)
+
+data class ForgotPasswordResponseDto(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("message") val message: String = "",
+    @SerializedName("otpPreview") val otpPreview: String? = null,
+    @SerializedName("identifier") val identifier: String = ""
+)
+
+data class ResetPasswordRequestDto(
+    @SerializedName("identifier") val identifier: String,
+    @SerializedName("otp") val otp: String? = null,
+    @SerializedName("newPassword") val newPassword: String
 )
 
 data class RegisterStudentRequestDto(

@@ -30,6 +30,21 @@ class AuthInterceptor @Inject constructor(
             requestBuilder.header("Authorization", "Bearer $token")
         }
 
-        return chain.proceed(requestBuilder.build())
+        val response = chain.proceed(requestBuilder.build())
+
+        if (response.code == 403 || response.code == 401) {
+            try {
+                val peek = response.peekBody(2048).string()
+                if (peek.contains("HOSTEL_ALLOCATION_INACTIVE") ||
+                    peek.contains("ACCOUNT_DEALLOCATED") ||
+                    peek.contains("allocation has ended") ||
+                    peek.contains("allocation has been removed") ||
+                    peek.contains("ACCOUNT_INACTIVE")) {
+                    tokenManager.notifyDeallocated("Your hostel allocation has ended. You have been logged out.")
+                }
+            } catch (_: Exception) {}
+        }
+
+        return response
     }
 }

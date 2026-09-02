@@ -12,6 +12,18 @@ interface AuthApi {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequestDto): Response<ApiResponse<AuthResponseDataDto>>
 
+    @POST("auth/validate-student-id")
+    suspend fun validateStudentId(@Body request: ValidateStudentIdRequestDto): Response<ApiResponse<ValidateStudentIdResponseDto>>
+
+    @POST("auth/activate-student")
+    suspend fun activateStudent(@Body request: ActivateStudentRequestDto): Response<ApiResponse<AuthResponseDataDto>>
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequestDto): Response<ApiResponse<ForgotPasswordResponseDto>>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequestDto): Response<ApiResponse<Map<String, String>>>
+
     @POST("auth/register/student")
     suspend fun registerStudent(@Body request: RegisterStudentRequestDto): Response<ApiResponse<AuthResponseDataDto>>
 

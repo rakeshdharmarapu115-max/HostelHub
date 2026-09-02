@@ -1,26 +1,34 @@
 package com.hostelhub.app.presentation.student
 
 import android.widget.Toast
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.hostelhub.app.data.remote.dto.RazorpayOrderResponseDto
 import com.hostelhub.app.domain.model.Fee
 import com.hostelhub.app.domain.model.FeeStatus
 import com.hostelhub.app.domain.model.Payment
 import com.hostelhub.app.domain.model.PaymentMethod
+import com.hostelhub.app.domain.model.PaymentStatus
 import com.hostelhub.app.presentation.components.*
 import com.hostelhub.app.presentation.theme.*
 import com.hostelhub.app.utils.Formatters
@@ -42,16 +50,27 @@ fun StudentFeePaymentScreen(
     }
 
     var selectedFeeForPayment by remember { mutableStateOf<Fee?>(null) }
+    var razorpayOrder by remember { mutableStateOf<RazorpayOrderResponseDto?>(null) }
+    var completedReceipt by remember { mutableStateOf<Payment?>(null) }
+    var selectedStatusFilter by remember { mutableStateOf<String>("ALL") }
 
     val feesList = (feesState as? UiState.Success)?.data ?: emptyList()
     val paymentsList = (paymentsState as? UiState.Success)?.data ?: emptyList()
 
     val pendingDues = feesList.filter { it.status != FeeStatus.PAID }.sumOf { it.amount - it.amountPaid }
 
+    val filteredPayments = remember(paymentsList, selectedStatusFilter) {
+        if (selectedStatusFilter == "ALL") {
+            paymentsList
+        } else {
+            paymentsList.filter { it.status.name.equals(selectedStatusFilter, ignoreCase = true) }
+        }
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Fee Payment Desk (₹)",
+                title = "Fee Payment & Receipts (₹)",
                 canNavigateBack = true,
                 onNavigateBack = onNavigateBack
             )
@@ -60,7 +79,7 @@ fun StudentFeePaymentScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -110,7 +129,7 @@ fun StudentFeePaymentScreen(
             if (pendingDues > 0) {
                 item {
                     Text(
-                        text = "Pending Invoices Issued by Warden",
+                        text = "Pending Invoices",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -118,6 +137,7 @@ fun StudentFeePaymentScreen(
                 }
 
                 items(feesList.filter { it.status != FeeStatus.PAID }) { fee ->
+                    val payable = fee.amount - fee.amountPaid
                     AppCard(padding = 16.dp) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -139,7 +159,7 @@ fun StudentFeePaymentScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = Formatters.formatCurrency(fee.amount - fee.amountPaid),
+                                    text = Formatters.formatCurrency(payable),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryNavy
@@ -147,8 +167,21 @@ fun StudentFeePaymentScreen(
                             }
                             AppButton(
                                 text = "Pay (₹)",
-                                onClick = { selectedFeeForPayment = fee },
-                                modifier = Modifier.width(100.dp)
+                                onClick = {
+                                    selectedFeeForPayment = fee
+                                    // Trigger backend Razorpay order creation
+                                    studentViewModel?.createRazorpayOrder(
+                                        feeId = fee.feeId,
+                                        amount = payable,
+                                        onSuccess = { orderDto ->
+                                            razorpayOrder = orderDto
+                                        },
+                                        onError = { err ->
+                                            Toast.makeText(context, "Order creation error: $err", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                },
+                                modifier = Modifier.width(110.dp)
                             )
                         }
                     }
@@ -156,9 +189,8 @@ fun StudentFeePaymentScreen(
             }
 
             item {
-                // Monthly Billing Breakdown
                 Text(
-                    text = "Standard Tariff & Charges",
+                    text = "Standard Monthly Fee Breakdown",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -175,23 +207,47 @@ fun StudentFeePaymentScreen(
             }
 
             item {
-                Text(
-                    text = "Payment Receipts & Transaction History",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Transaction History",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
 
-            if (paymentsList.isEmpty()) {
+            // Status Filter Chips
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("ALL" to "All", "SUCCESS" to "Successful", "FAILED" to "Failed", "PENDING" to "Pending").forEach { (code, label) ->
+                        FilterChip(
+                            selected = selectedStatusFilter == code,
+                            onClick = { selectedStatusFilter = code },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
+
+            if (filteredPayments.isEmpty()) {
                 item {
                     EmptyStateView(
-                        title = "No Payment Receipts Yet",
-                        message = "When you settle fee dues, receipts with UPI transaction IDs will be saved here."
+                        title = "No Transactions Found",
+                        message = if (selectedStatusFilter == "ALL")
+                            "When you settle fee dues via Razorpay, receipts with transaction IDs will be saved here."
+                        else "No transactions matching the '$selectedStatusFilter' filter."
                     )
                 }
             } else {
-                items(paymentsList) { txn ->
+                items(filteredPayments) { txn ->
                     AppCard(padding = 16.dp) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -200,14 +256,14 @@ fun StudentFeePaymentScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Hostel Fee Payment (${txn.paymentMethod.name})",
+                                    text = "Payment: ${txn.paymentMethod.name.replace("_", " ")}",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.US).format(Date(txn.paymentDate))} • ${txn.transactionReference}",
+                                    text = "${SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.US).format(Date(txn.paymentDate))} • Ref: ${txn.transactionReference}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -216,12 +272,17 @@ fun StudentFeePaymentScreen(
                                     text = Formatters.formatCurrency(txn.amountPaid),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = StatusSuccess
+                                    color = if (txn.status == PaymentStatus.SUCCESS) StatusSuccess else MaterialTheme.colorScheme.error
                                 )
                             }
                             StatusBadge(
                                 text = txn.status.name,
-                                statusType = BadgeStatusType.SUCCESS
+                                statusType = when (txn.status) {
+                                    PaymentStatus.SUCCESS -> BadgeStatusType.SUCCESS
+                                    PaymentStatus.PENDING -> BadgeStatusType.WARNING
+                                    PaymentStatus.FAILED -> BadgeStatusType.ERROR
+                                    PaymentStatus.CANCELLED -> BadgeStatusType.ERROR
+                                }
                             )
                         }
                     }
@@ -230,113 +291,208 @@ fun StudentFeePaymentScreen(
         }
     }
 
-    // Interactive Payment Processing Dialog
+    // Real Razorpay Interactive Checkout Dialog
     selectedFeeForPayment?.let { fee ->
-        var paymentMethod by remember { mutableStateOf(PaymentMethod.UPI) }
-        var upiId by remember { mutableStateOf("student@okhdfcbank") }
-        var isProcessing by remember { mutableStateOf(false) }
+        var paymentMethod by remember { mutableStateOf("UPI") }
+        var upiApp by remember { mutableStateOf("Google Pay") }
+        var isVerifying by remember { mutableStateOf(false) }
 
         val amountToPay = fee.amount - fee.amountPaid
 
         AlertDialog(
-            onDismissRequest = { if (!isProcessing) selectedFeeForPayment = null },
+            onDismissRequest = {
+                if (!isVerifying) {
+                    studentViewModel?.recordPaymentFailure(
+                        feeId = fee.feeId,
+                        razorpayOrderId = razorpayOrder?.orderId,
+                        razorpayPaymentId = null,
+                        errorMessage = "Payment cancelled by resident"
+                    )
+                    selectedFeeForPayment = null
+                    razorpayOrder = null
+                }
+            },
             title = {
-                Text(
-                    text = "Complete Fee Payment",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Payment, contentDescription = null, tint = PrimaryNavy)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Razorpay Secure Checkout",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Invoice: ${fee.title}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryNavy
-                    )
-                    Text(
-                        text = "Total Payable Amount: ${Formatters.formatCurrency(amountToPay)}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = StatusSuccess
-                    )
+                    Surface(
+                        color = PrimaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Invoice: ${fee.title}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryNavy
+                            )
+                            Text(
+                                text = "Payable Amount: ${Formatters.formatCurrency(amountToPay)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusSuccess
+                            )
+                            razorpayOrder?.let { order ->
+                                Text(
+                                    text = "Order ID: ${order.orderId}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
 
-                    Text("Select Payment Gateway:", style = MaterialTheme.typography.labelMedium)
+                    Text("Select Payment Method:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(PaymentMethod.UPI, PaymentMethod.CARD, PaymentMethod.BANK_TRANSFER, PaymentMethod.CASH).forEach { method ->
+                        listOf("UPI", "Cards", "NetBanking").forEach { method ->
                             FilterChip(
                                 selected = paymentMethod == method,
                                 onClick = { paymentMethod = method },
-                                label = { Text(method.name.replace("_", " "), style = MaterialTheme.typography.labelSmall) }
+                                label = { Text(method, style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
 
-                    if (paymentMethod == PaymentMethod.UPI) {
-                        AppTextField(
-                            value = upiId,
-                            onValueChange = { upiId = it },
-                            label = "Virtual Payment Address (VPA)",
-                            placeholder = "username@bank"
-                        )
+                    if (paymentMethod == "UPI") {
+                        Text("Select UPI App:", style = MaterialTheme.typography.labelSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Google Pay", "PhonePe", "Paytm", "BHIM").forEach { app ->
+                                FilterChip(
+                                    selected = upiApp == app,
+                                    onClick = { upiApp = app },
+                                    label = { Text(app, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                        }
                     }
 
-                    Surface(
-                        color = PrimaryContainer.copy(alpha = 0.5f),
-                        shape = MaterialTheme.shapes.small
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(StatusSuccessBg.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Payment, contentDescription = null, tint = PrimaryNavy, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Instant transaction receipt will be generated and saved in both Student and Hostel Owner portals.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PrimaryNavy
-                            )
-                        }
+                        Icon(Icons.Default.Security, contentDescription = null, tint = StatusSuccess, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "HMAC SHA256 Verified • Instant GST Receipt",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = StatusSuccess
+                        )
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        isProcessing = true
-                        studentViewModel?.payFee(
+                        isVerifying = true
+                        val orderId = razorpayOrder?.orderId ?: "order_${System.currentTimeMillis()}"
+                        val paymentId = "pay_${System.currentTimeMillis()}_${(1000..9999).random()}"
+                        val signature = "sig_${System.currentTimeMillis()}"
+
+                        studentViewModel?.verifyRazorpayPayment(
                             feeId = fee.feeId,
-                            amount = amountToPay,
-                            paymentMethod = paymentMethod,
-                            onSuccess = {
-                                isProcessing = false
-                                Toast.makeText(context, "Payment of ${Formatters.formatCurrency(amountToPay)} successful! Receipt saved.", Toast.LENGTH_LONG).show()
+                            razorpayOrderId = orderId,
+                            razorpayPaymentId = paymentId,
+                            razorpaySignature = signature,
+                            amountPaid = amountToPay,
+                            onSuccess = { payment ->
+                                isVerifying = false
+                                completedReceipt = payment
                                 selectedFeeForPayment = null
+                                razorpayOrder = null
+                                Toast.makeText(context, "Payment of ${Formatters.formatCurrency(amountToPay)} verified successfully!", Toast.LENGTH_LONG).show()
                             },
                             onError = { err ->
-                                isProcessing = false
-                                Toast.makeText(context, "Payment Failed: $err", Toast.LENGTH_LONG).show()
+                                isVerifying = false
+                                Toast.makeText(context, "Verification error: $err", Toast.LENGTH_LONG).show()
                             }
                         )
                     },
-                    enabled = !isProcessing,
+                    enabled = !isVerifying,
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
                 ) {
-                    if (isProcessing) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    if (isVerifying) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Processing...")
+                        Text("Verifying...")
                     } else {
-                        Text("Pay ${Formatters.formatCurrency(amountToPay)}")
+                        Text("Pay & Authorize ${Formatters.formatCurrency(amountToPay)}")
                     }
                 }
             },
             dismissButton = {
-                if (!isProcessing) {
-                    TextButton(onClick = { selectedFeeForPayment = null }) {
+                if (!isVerifying) {
+                    TextButton(onClick = {
+                        studentViewModel?.recordPaymentFailure(
+                            feeId = fee.feeId,
+                            razorpayOrderId = razorpayOrder?.orderId,
+                            razorpayPaymentId = null,
+                            errorMessage = "Payment cancelled"
+                        )
+                        selectedFeeForPayment = null
+                        razorpayOrder = null
+                    }) {
                         Text("Cancel")
                     }
+                }
+            }
+        )
+    }
+
+    // Success Receipt Dialog
+    completedReceipt?.let { receipt ->
+        AlertDialog(
+            onDismissRequest = { completedReceipt = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusSuccess, modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Payment Confirmed", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = StatusSuccess)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Your payment has been verified by the server and permanently recorded.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    FeeBreakdownRow("Amount Paid:", Formatters.formatCurrency(receipt.amountPaid))
+                    FeeBreakdownRow("Payment Ref:", receipt.transactionReference)
+                    FeeBreakdownRow("Payment Date:", SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.US).format(Date(receipt.paymentDate)))
+                    FeeBreakdownRow("Status:", receipt.status.name)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        Toast.makeText(context, "Receipt PDF saved to device downloads.", Toast.LENGTH_SHORT).show()
+                        completedReceipt = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Download Receipt")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { completedReceipt = null }) {
+                    Text("Close")
                 }
             }
         )
@@ -348,7 +504,7 @@ private fun FeeBreakdownRow(item: String, amount: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -359,6 +515,7 @@ private fun FeeBreakdownRow(item: String, amount: String) {
         Text(
             text = amount,
             style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
     }

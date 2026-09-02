@@ -26,6 +26,18 @@ interface FeePaymentApi {
     @GET("payments/hostel/{hostelId}")
     suspend fun getPaymentsForHostel(@Path("hostelId") hostelId: String): Response<ApiResponse<List<PaymentDto>>>
 
+    @GET("payments/history")
+    suspend fun getTransactionHistory(): Response<ApiResponse<List<PaymentDto>>>
+
+    @POST("payments/razorpay/create-order")
+    suspend fun createRazorpayOrder(@Body request: CreateRazorpayOrderRequestDto): Response<ApiResponse<RazorpayOrderResponseDto>>
+
+    @POST("payments/razorpay/verify")
+    suspend fun verifyRazorpayPayment(@Body request: VerifyRazorpayPaymentRequestDto): Response<ApiResponse<PaymentDto>>
+
+    @POST("payments/razorpay/failed")
+    suspend fun recordPaymentFailure(@Body request: RecordPaymentFailureRequestDto): Response<ApiResponse<PaymentDto>>
+
     @POST("payments")
     suspend fun recordPayment(@Body request: RecordPaymentRequestDto): Response<ApiResponse<PaymentDto>>
 }
