@@ -138,7 +138,7 @@ async function testLivePaymentFlow() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'alex.mercer@student.campus.edu',
+        email: 'student@campus.edu',
         password: 'Password@123'
       })
     });

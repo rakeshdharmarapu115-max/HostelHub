@@ -74,11 +74,11 @@ app.use('/', apiRoutes);
 // Centralized Error Handling
 app.use(errorHandler);
 
-import { autoSeedIfEmpty } from './utils/autoSeed';
+import { ensureDatabaseSchema, autoSeedIfEmpty } from './utils/autoSeed';
 
 // Start server if not in test mode
 if (env.nodeEnv !== 'test') {
-  app.listen(env.port, '0.0.0.0', () => {
+  app.listen(env.port, '0.0.0.0', async () => {
     console.log(`=======================================================`);
     console.log(`☁️ HostelHub Cloud Server active on port ${env.port}`);
     console.log(`🌐 API Base URL: http://0.0.0.0:${env.port}/api`);
@@ -86,7 +86,11 @@ if (env.nodeEnv !== 'test') {
     console.log(`🩺 Health Check: /health`);
     console.log(`=======================================================`);
 
-    // Auto-seed database if fresh deployment
-    autoSeedIfEmpty().catch(err => console.error('Seed error:', err));
+    try {
+      await ensureDatabaseSchema();
+      await autoSeedIfEmpty();
+    } catch (err) {
+      console.error('[DB-INIT] Initialization error:', err);
+    }
   });
 }
