@@ -1,8 +1,36 @@
 import { prisma } from '../config/prisma';
 import * as bcrypt from 'bcryptjs';
 
+export async function ensureDatabaseSchema(): Promise<void> {
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE hostels 
+      ADD COLUMN IF NOT EXISTS payment_account_id TEXT,
+      ADD COLUMN IF NOT EXISTS payment_account_status TEXT DEFAULT 'ACTIVE',
+      ADD COLUMN IF NOT EXISTS payment_qr_url TEXT,
+      ADD COLUMN IF NOT EXISTS qr_payment_enabled BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS upi_id TEXT,
+      ADD COLUMN IF NOT EXISTS merchant_name TEXT;
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE payments
+      ADD COLUMN IF NOT EXISTS order_id TEXT,
+      ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT,
+      ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT,
+      ADD COLUMN IF NOT EXISTS razorpay_signature TEXT,
+      ADD COLUMN IF NOT EXISTS payment_gateway TEXT DEFAULT 'RAZORPAY',
+      ADD COLUMN IF NOT EXISTS verified_by_host_id TEXT;
+    `);
+    console.log('✓ Database payment schema columns verified and in sync');
+  } catch (err: any) {
+    console.warn('[DB] Schema column sync note:', err.message);
+  }
+}
+
 export async function autoSeedIfEmpty(): Promise<void> {
   try {
+    await ensureDatabaseSchema();
     const userCount = await prisma.user.count();
     if (userCount > 0) {
       return; // Database already has users
