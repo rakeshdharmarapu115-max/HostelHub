@@ -55,7 +55,9 @@ fun AppNavHost(
         Screen.MyRoom.route,
         Screen.StudentPayments.route,
         Screen.StudentComplaints.route,
-        Screen.StudentProfile.route
+        Screen.StudentProfile.route,
+        Screen.StudentFoodMenu.route,
+        Screen.StudentAttendance.route
     )
 
     val isHostBottomNavRoute = currentRoute in listOf(
@@ -63,14 +65,20 @@ fun AppNavHost(
         Screen.HostRooms.route,
         Screen.HostStudents.route,
         Screen.HostComplaints.route,
-        Screen.HostFees.route
+        Screen.HostFees.route,
+        Screen.HostFoodMenuAdmin.route,
+        Screen.HostAttendance.route,
+        Screen.HostAnnouncements.route,
+        Screen.HostProfile.route
     )
 
     val isAdminBottomNavRoute = currentRoute in listOf(
         Screen.AdminDashboard.route,
         Screen.AdminHostels.route,
         Screen.AdminAnalytics.route,
-        Screen.AdminUsers.route
+        Screen.AdminUsers.route,
+        Screen.AdminAnnouncements.route,
+        Screen.AdminProfile.route
     )
 
     Scaffold(
@@ -84,10 +92,17 @@ fun AppNavHost(
                         indicatorColor = StudentAccentContainer,
                         onItemClick = { route ->
                             if (currentRoute != route) {
-                                navController.navigate(route) {
-                                    popUpTo(Screen.StudentDashboard.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (route == Screen.StudentDashboard.route) {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.StudentDashboard.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.StudentDashboard.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         }
@@ -101,10 +116,17 @@ fun AppNavHost(
                         indicatorColor = HostAccentContainer,
                         onItemClick = { route ->
                             if (currentRoute != route) {
-                                navController.navigate(route) {
-                                    popUpTo(Screen.HostDashboard.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (route == Screen.HostDashboard.route) {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.HostDashboard.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.HostDashboard.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         }
@@ -118,10 +140,17 @@ fun AppNavHost(
                         indicatorColor = AdminAccentContainer,
                         onItemClick = { route ->
                             if (currentRoute != route) {
-                                navController.navigate(route) {
-                                    popUpTo(Screen.AdminDashboard.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (route == Screen.AdminDashboard.route) {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.AdminDashboard.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    navController.navigate(route) {
+                                        popUpTo(Screen.AdminDashboard.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         }
@@ -394,7 +423,15 @@ fun AppNavHost(
                         onNavigateToMenu = { navController.navigate(Screen.HostFoodMenuAdmin.route) },
                         onNavigateToAttendance = { navController.navigate(Screen.HostAttendance.route) },
                         onNavigateToAnnouncements = { navController.navigate(Screen.HostAnnouncements.route) },
+                        onNavigateToPaymentSettings = { navController.navigate(Screen.HostPaymentSettings.route) },
                         onNavigateToProfile = { navController.navigate(Screen.HostProfile.route) }
+                    )
+                }
+
+                composable(Screen.HostPaymentSettings.route) {
+                    HostPaymentSettingsScreen(
+                        hostViewModel = hostViewModel,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
@@ -464,6 +501,7 @@ fun AppNavHost(
                     HostProfileScreen(
                         hostViewModel = hostViewModel,
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToPaymentSettings = { navController.navigate(Screen.HostPaymentSettings.route) },
                         onLogout = {
                             authViewModel.logout {
                                 navController.navigate(Screen.Login.route) {
@@ -481,6 +519,7 @@ fun AppNavHost(
                         adminViewModel = adminViewModel,
                         onNavigateToHostels = { navController.navigate(Screen.AdminHostels.route) },
                         onNavigateToAnalytics = { navController.navigate(Screen.AdminAnalytics.route) },
+                        onNavigateToComplaints = { navController.navigate(Screen.HostComplaints.route) },
                         onNavigateToAnnouncements = { navController.navigate(Screen.AdminAnnouncements.route) },
                         onNavigateToUsers = { navController.navigate(Screen.AdminUsers.route) },
                         onNavigateToProfile = { navController.navigate(Screen.AdminProfile.route) }

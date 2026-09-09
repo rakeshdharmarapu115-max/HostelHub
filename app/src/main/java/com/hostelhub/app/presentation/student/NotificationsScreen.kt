@@ -47,7 +47,7 @@ fun NotificationsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundCool)
+                    .background(StudentBackground)
                     .padding(paddingValues)
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
@@ -61,7 +61,7 @@ fun NotificationsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundCool)
+                    .background(StudentBackground)
                     .padding(paddingValues)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

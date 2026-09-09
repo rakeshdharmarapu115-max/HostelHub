@@ -1,5 +1,7 @@
 import { cloudinary, isCloudinaryConfigured } from '../config/storage.config';
 import { env } from '../config/env';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface UploadResult {
   url: string;
@@ -8,12 +10,12 @@ export interface UploadResult {
   width?: number;
   height?: number;
   bytes?: number;
-  provider: 'cloudinary' | 'fallback';
+  provider: 'cloudinary' | 'local' | 'fallback';
 }
 
 export class StorageService {
   /**
-   * Uploads a file buffer directly to Cloudinary (or returns optimized data URI if offline/not configured)
+   * Uploads a file buffer directly to Cloudinary (or stores locally in uploads directory if offline/not configured)
    */
   async uploadFile(
     fileBuffer: Buffer,
@@ -25,7 +27,8 @@ export class StorageService {
       transformation?: any[];
     } = {}
   ): Promise<UploadResult> {
-    const folder = `${env.cloudinary.folder}/${options.folder || 'uploads'}`;
+    const targetSubfolder = options.folder || 'uploads';
+    const folder = `${env.cloudinary.folder}/${targetSubfolder}`;
 
     if (isCloudinaryConfigured) {
       try {
@@ -58,19 +61,42 @@ export class StorageService {
           provider: 'cloudinary'
         };
       } catch (err: any) {
-        console.error('Cloudinary upload error, using fallback:', err.message);
+        console.error('Cloudinary upload error, using local storage fallback:', err.message);
       }
     }
 
-    // Fallback mode: inline base64 data URI for instant development & testing
-    const mime = options.mimeType || 'image/jpeg';
-    const base64Data = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+    // Local Disk Storage fallback
+    try {
+      const uploadsDir = path.join(process.cwd(), 'uploads', targetSubfolder);
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
 
-    return {
-      url: base64Data,
-      bytes: fileBuffer.length,
-      provider: 'fallback'
-    };
+      const ext = options.mimeType ? (options.mimeType.split('/')[1] || 'png') : 'png';
+      const cleanExt = ext.replace('jpeg', 'jpg');
+      const safeFilename = options.filename || `file_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${cleanExt}`;
+      const filePath = path.join(uploadsDir, safeFilename);
+
+      fs.writeFileSync(filePath, fileBuffer);
+
+      const localUrl = `/uploads/${targetSubfolder}/${safeFilename}`;
+      return {
+        url: localUrl,
+        publicId: safeFilename,
+        format: cleanExt,
+        bytes: fileBuffer.length,
+        provider: 'local'
+      };
+    } catch (diskErr: any) {
+      console.error('Disk storage error, using base64 fallback:', diskErr.message);
+      const mime = options.mimeType || 'image/png';
+      const base64Data = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+      return {
+        url: base64Data,
+        bytes: fileBuffer.length,
+        provider: 'fallback'
+      };
+    }
   }
 
   /**

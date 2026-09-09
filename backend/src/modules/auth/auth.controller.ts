@@ -101,8 +101,8 @@ export class AuthController {
 
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, identifier, studentId, phoneNumber, password } = req.body;
-      const idToUse = identifier || email || studentId || phoneNumber;
+      const { email, identifier, studentId, phoneNumber, emailOrStudentIdOrPhone, password } = req.body;
+      const idToUse = identifier || email || studentId || phoneNumber || emailOrStudentIdOrPhone;
       const result = await authService.login(idToUse, password);
       sendSuccess(res, 'Login successful', result, 200);
     } catch (error: any) {

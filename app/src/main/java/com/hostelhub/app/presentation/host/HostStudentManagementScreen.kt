@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.hostelhub.app.domain.model.Room
@@ -184,7 +185,7 @@ fun HostStudentManagementScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(HostBackground)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
@@ -321,7 +322,7 @@ fun HostStudentManagementScreen(
                 hostViewModel?.assignBed(
                     roomId = room.roomId,
                     bedId = bed.bedId,
-                    studentId = student.studentId.ifBlank { student.userId },
+                    studentId = student.studentId.ifBlank { student.userId }.ifBlank { student.rollNumber },
                     studentName = student.fullName,
                     onSuccess = {
                         Toast.makeText(context, "${student.fullName} assigned to Room ${room.roomNumber} ${bed.bedNumber}!", Toast.LENGTH_LONG).show()
@@ -609,6 +610,10 @@ private fun AddStudentDialog(
 
     val availableRooms = rooms.filter { it.occupiedCount < it.totalCapacity }
 
+    LaunchedEffect(availableRooms) {
+        println("[ROOM DEBUG] LOADED ROOMS: ${availableRooms.map { "Room ${it.roomNumber} (databaseRoomId: ${it.roomId})" }}")
+    }
+
     AlertDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
         title = {
@@ -717,11 +722,13 @@ private fun AddStudentDialog(
                 if (availableRooms.isNotEmpty()) {
                     Text(text = "Assign Room (Optional):", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        availableRooms.take(4).forEach { room ->
-                            val isSelected = selectedRoom?.roomId == room.roomId
+                        availableRooms.forEach { room ->
+                            val isSelected = selectedRoom?.roomNumber == room.roomNumber
                             FilterChip(
                                 selected = isSelected,
                                 onClick = {
@@ -790,8 +797,8 @@ private fun AddStudentDialog(
                         gender = "Male",
                         permanentAddress = "Campus Resident",
                         emergencyContactName = "Parent/Guardian",
-                        hostelId = "",
-                        roomId = selectedRoom?.roomId,
+                        hostelId = selectedRoom?.hostelId ?: hostViewModel.currentHostelId.value,
+                        roomId = null,
                         roomNumber = selectedRoom?.roomNumber,
                         bedNumber = selectedBed?.bedNumber,
                         status = com.hostelhub.app.domain.model.StudentStatus.ACTIVE

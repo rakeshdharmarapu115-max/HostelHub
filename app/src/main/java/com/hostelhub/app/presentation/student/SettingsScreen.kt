@@ -1,6 +1,7 @@
 package com.hostelhub.app.presentation.student
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -13,7 +14,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,55 +32,37 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
 import com.hostelhub.app.data.local.AppSettingsManager
-import com.hostelhub.app.data.remote.NetworkConfig
 import com.hostelhub.app.domain.model.FeeStatus
 import com.hostelhub.app.domain.model.User
 import com.hostelhub.app.notifications.HostelNotificationManager
-import com.hostelhub.app.presentation.components.AppButton
 import com.hostelhub.app.presentation.components.AppCard
 import com.hostelhub.app.presentation.components.AppTextField
 import com.hostelhub.app.presentation.components.AppTopBar
-import com.hostelhub.app.presentation.components.ButtonVariant
 import com.hostelhub.app.presentation.theme.*
 import com.hostelhub.app.security.AppLockManager
-import com.hostelhub.app.security.BiometricStatus
 import com.hostelhub.app.utils.UiState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 @Composable
 fun SettingsScreen(
     currentUser: User? = null,
-    studentViewModel: com.hostelhub.app.presentation.student.StudentViewModel? = null,
+    studentViewModel: StudentViewModel? = null,
     onNavigateToProfile: () -> Unit = {},
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
     val coroutineScope = rememberCoroutineScope()
     val appSettingsManager = remember { AppSettingsManager(context.applicationContext) }
     val appLockManager = remember { AppLockManager(context.applicationContext) }
     val hostelNotificationManager = remember { HostelNotificationManager(context.applicationContext, appSettingsManager) }
-    val networkConfig = remember { NetworkConfig(context.applicationContext) }
 
     LaunchedEffect(currentUser?.userId) {
         appSettingsManager.setUserScope(currentUser?.userId)
     }
 
-    var currentBaseUrl by remember { mutableStateOf(networkConfig.getBaseUrl()) }
-    var showServerDialog by remember { mutableStateOf(false) }
-    var customUrlInput by remember { mutableStateOf(currentBaseUrl) }
-    var pingStatus by remember { mutableStateOf<String?>(null) }
-    var isPinging by remember { mutableStateOf(false) }
-
-    val themeMode by appSettingsManager.themeMode.collectAsState()
-    val isDarkMode by appSettingsManager.isDarkMode.collectAsState()
     val pushNotifications by appSettingsManager.pushNotifications.collectAsState()
     val feeReminders by appSettingsManager.feeReminders.collectAsState()
     val menuUpdates by appSettingsManager.menuUpdates.collectAsState()
@@ -94,6 +76,9 @@ fun SettingsScreen(
     var showEmergencyReportDialog by remember { mutableStateOf(false) }
     var showSetPinDialog by remember { mutableStateOf(false) }
     var showDisablePinDialog by remember { mutableStateOf(false) }
+
+    // Collapsible Help Centre state (collapsed by default)
+    var isFaqSectionExpanded by remember { mutableStateOf(false) }
     var selectedFaqIndex by remember { mutableStateOf<Int?>(null) }
 
     // User details editable state
@@ -102,24 +87,56 @@ fun SettingsScreen(
     var userCollege by remember { mutableStateOf("TKR College of Engineering") }
     var userCourse by remember { mutableStateOf("Diploma in Engineering") }
     var userYear by remember { mutableStateOf("1st Year") }
-    var userEmergencyContact by remember { mutableStateOf("Guardian") }
     var userEmergencyPhone by remember { mutableStateOf(currentUser?.phoneNumber ?: "6303299506") }
     var userAddress by remember { mutableStateOf("Campus Hostel Resident, Block A") }
+
+    // Permission state checking
+    fun hasDeviceNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
+    }
+
+    var isNotificationPermissionGranted by remember { mutableStateOf(hasDeviceNotificationPermission()) }
+    var pendingNotificationAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // Runtime Notification Permission Launcher (Android 13+)
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
+        isNotificationPermissionGranted = isGranted
         if (isGranted) {
-            appSettingsManager.setPushNotifications(true)
-            hostelNotificationManager.showAnnouncement(
-                title = "HostelHub Alerts Active",
-                message = "You will now receive official hostel notices and circulars."
-            )
-            Toast.makeText(context, "Push notifications enabled!", Toast.LENGTH_SHORT).show()
+            pendingNotificationAction?.invoke()
+            pendingNotificationAction = null
+            Toast.makeText(context, "Notification permission granted!", Toast.LENGTH_SHORT).show()
         } else {
-            appSettingsManager.setPushNotifications(false)
-            Toast.makeText(context, "Notification permission denied. Enable in device settings.", Toast.LENGTH_LONG).show()
+            pendingNotificationAction = null
+            Toast.makeText(context, "Notification permission denied. Alerts remain muted.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun requestNotificationPermissionOrExecute(onGranted: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                isNotificationPermissionGranted = true
+                onGranted()
+            } else {
+                pendingNotificationAction = onGranted
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                isNotificationPermissionGranted = true
+                onGranted()
+            } else {
+                Toast.makeText(context, "Notifications are disabled on your device. Opening system settings...", Toast.LENGTH_LONG).show()
+                val intent = Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName)
+                }
+                context.startActivity(intent)
+            }
         }
     }
 
@@ -229,109 +246,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 2. Appearance & Dark Mode
-            Text(
-                text = "Appearance & Dark Mode",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            AppCard(padding = 16.dp) {
-                val systemInDark = isSystemInDarkTheme()
-                val isDisplayDark = when (themeMode) {
-                    com.hostelhub.app.data.local.ThemeMode.LIGHT -> false
-                    com.hostelhub.app.data.local.ThemeMode.DARK -> true
-                    com.hostelhub.app.data.local.ThemeMode.SYSTEM_DEFAULT -> systemInDark
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(if (isDisplayDark) Color(0xFF1E293B) else Color(0xFFFEF3C7), shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isDisplayDark) Icons.Default.DarkMode else Icons.Default.LightMode,
-                                contentDescription = null,
-                                tint = if (isDisplayDark) Color(0xFF60A5FA) else Color(0xFFD97706),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Dark Theme",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (isDisplayDark) "Dark mode enabled" else "Light mode enabled",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Switch(
-                        checked = isDisplayDark,
-                        onCheckedChange = { appSettingsManager.setDarkMode(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = PrimaryNavy,
-                            checkedTrackColor = SecondaryTeal.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                )
-
-                Text(
-                    text = "Mode Selection",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        Triple(com.hostelhub.app.data.local.ThemeMode.LIGHT, "Light", Icons.Default.LightMode),
-                        Triple(com.hostelhub.app.data.local.ThemeMode.DARK, "Dark", Icons.Default.DarkMode),
-                        Triple(com.hostelhub.app.data.local.ThemeMode.SYSTEM_DEFAULT, "System", Icons.Default.BrightnessAuto)
-                    ).forEach { (mode, label, icon) ->
-                        FilterChip(
-                            selected = themeMode == mode,
-                            onClick = { appSettingsManager.setThemeMode(mode) },
-                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                            leadingIcon = {
-                                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 4. Push Notifications & Alerts
+            // 2. Push Notifications & Alerts (REAL FUNCTIONALITY)
             Text(
                 text = "Push Notifications & Alerts",
                 style = MaterialTheme.typography.titleMedium,
@@ -341,28 +256,20 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             AppCard(padding = 16.dp) {
+                val isPushActive = isNotificationPermissionGranted && pushNotifications
+
                 SettingSwitchRow(
                     title = "Push Notifications",
-                    subtitle = if (pushNotifications) "Active • Receiving live notices and circulars" else "Muted • Normal notifications are silenced",
+                    subtitle = if (isPushActive) "Active • Receiving live notices and circulars" else "Muted • Normal notifications are silenced",
                     icon = Icons.Default.Notifications,
-                    checked = pushNotifications,
+                    checked = isPushActive,
                     onCheckedChange = { enabled ->
                         if (enabled) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else if (!hostelNotificationManager.areNotificationsEnabledOnDevice()) {
-                                Toast.makeText(context, "Notifications disabled on device. Opening system settings...", Toast.LENGTH_LONG).show()
-                                val intent = Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                    putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName)
-                                }
-                                context.startActivity(intent)
-                            } else {
+                            requestNotificationPermissionOrExecute {
                                 appSettingsManager.setPushNotifications(true)
                                 hostelNotificationManager.showAnnouncement(
-                                    "HostelHub Alerts Active",
-                                    "You will now receive verified hostel announcements and notices."
+                                    title = "HostelHub Alerts Active",
+                                    message = "You will now receive official hostel notices and circulars."
                                 )
                                 Toast.makeText(context, "Push notifications enabled!", Toast.LENGTH_SHORT).show()
                             }
@@ -372,60 +279,88 @@ fun SettingsScreen(
                         }
                     }
                 )
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                val isFeeReminderActive = isPushActive && feeReminders
+
                 SettingSwitchRow(
                     title = "Fee Payment Reminders",
-                    subtitle = if (feeReminders) "Active • Pending invoice alerts will notify you in ₹" else "Muted • Fee reminder alerts are disabled",
+                    subtitle = if (isFeeReminderActive) "Active • Pending invoice alerts will notify you in ₹" else "Muted • Fee reminder alerts are disabled",
                     icon = Icons.Default.Payment,
-                    checked = feeReminders,
+                    checked = isFeeReminderActive,
                     onCheckedChange = { enabled ->
-                        appSettingsManager.setFeeReminders(enabled)
                         if (enabled) {
-                            val feesList = (studentViewModel?.fees?.value as? UiState.Success)?.data
-                            val pendingFee = feesList?.firstOrNull { it.status == FeeStatus.PENDING || it.status == FeeStatus.OVERDUE }
-                            if (pendingFee != null) {
-                                val due = pendingFee.amount - pendingFee.amountPaid
-                                hostelNotificationManager.showFeeReminder(pendingFee.title, due, feeId = pendingFee.feeId)
-                                Toast.makeText(context, "Fee reminder active: ${pendingFee.title} (₹${due.toInt()})", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Fee reminders enabled for upcoming dues.", Toast.LENGTH_SHORT).show()
+                            requestNotificationPermissionOrExecute {
+                                appSettingsManager.setPushNotifications(true)
+                                appSettingsManager.setFeeReminders(true)
+                                val feesList = (studentViewModel?.fees?.value as? UiState.Success)?.data
+                                val pendingFee = feesList?.firstOrNull { it.status == FeeStatus.PENDING || it.status == FeeStatus.OVERDUE }
+                                if (pendingFee != null) {
+                                    val due = pendingFee.amount - pendingFee.amountPaid
+                                    hostelNotificationManager.showFeeReminder(pendingFee.title, due, feeId = pendingFee.feeId)
+                                    Toast.makeText(context, "Fee reminder active: ${pendingFee.title} (₹${due.toInt()})", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Fee reminders enabled for upcoming dues.", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         } else {
+                            appSettingsManager.setFeeReminders(false)
                             Toast.makeText(context, "Fee reminders disabled.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                val isMenuAlertActive = isPushActive && menuUpdates
+
                 SettingSwitchRow(
                     title = "Weekly Mess Menu Alerts",
-                    subtitle = if (menuUpdates) "Active • Meal schedule publications will alert you" else "Muted • Meal menu alerts disabled",
+                    subtitle = if (isMenuAlertActive) "Active • Meal schedule publications will alert you" else "Muted • Meal menu alerts disabled",
                     icon = Icons.Default.Restaurant,
-                    checked = menuUpdates,
+                    checked = isMenuAlertActive,
                     onCheckedChange = { enabled ->
-                        appSettingsManager.setMenuUpdates(enabled)
                         if (enabled) {
-                            hostelNotificationManager.showMessMenuAlert("Weekly Campus Dining Menu", "Fresh 7-day meal schedule is published and active.")
-                            Toast.makeText(context, "Mess menu alerts enabled.", Toast.LENGTH_SHORT).show()
+                            requestNotificationPermissionOrExecute {
+                                appSettingsManager.setPushNotifications(true)
+                                appSettingsManager.setMenuUpdates(true)
+                                hostelNotificationManager.showMessMenuAlert("Weekly Campus Dining Menu", "Fresh 7-day meal schedule is published and active.")
+                                Toast.makeText(context, "Mess menu alerts enabled.", Toast.LENGTH_SHORT).show()
+                            }
                         } else {
+                            appSettingsManager.setMenuUpdates(false)
                             Toast.makeText(context, "Mess menu alerts disabled.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                val isEmergencyAlertActive = isNotificationPermissionGranted && emergencyAlerts
+
                 SettingSwitchRow(
-                    title = "Emergency & Safety Broadcasts",
-                    subtitle = "Mandatory high-priority alerts for campus safety & urgent hazards",
+                    title = "Emergency / Safety Broadcasts",
+                    subtitle = if (isEmergencyAlertActive) "Active • High-priority campus safety & urgent hazard alerts" else "Muted • Emergency safety broadcasts disabled",
                     icon = Icons.Default.Warning,
-                    checked = true,
-                    onCheckedChange = {
-                        Toast.makeText(context, "Emergency & safety alerts remain active for resident protection.", Toast.LENGTH_SHORT).show()
+                    checked = isEmergencyAlertActive,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            requestNotificationPermissionOrExecute {
+                                appSettingsManager.setEmergencyAlerts(true)
+                                Toast.makeText(context, "Emergency & safety broadcasts enabled.", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            appSettingsManager.setEmergencyAlerts(false)
+                            Toast.makeText(context, "Emergency safety alerts muted.", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
             }
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 5. Security & Privacy
+            // 3. Security & Privacy
             Text(
                 text = "Security & Privacy",
                 style = MaterialTheme.typography.titleMedium,
@@ -474,53 +409,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 6. Data & Cache Management
-            Text(
-                text = "Data & Offline Storage",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            AppCard(padding = 16.dp) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Clear Offline Cache",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Free up temporary cached images and network responses",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            val freedBytes = appSettingsManager.clearCache()
-                            val mb = String.format("%.1f", freedBytes.toDouble() / (1024 * 1024))
-                            Toast.makeText(context, "Cleared $mb MB offline cache successfully!", Toast.LENGTH_SHORT).show()
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Clear Cache")
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 7. Report & Emergency SOS
+            // 4. Emergency & Incident Reporting
             Text(
                 text = "Emergency & Incident Reporting",
                 style = MaterialTheme.typography.titleMedium,
@@ -603,84 +492,129 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 5. Help Centre & FAQs
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Help Centre & FAQs",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                TextButton(onClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@hostelhub.edu"))
-                    intent.putExtra(Intent.EXTRA_SUBJECT, "HostelHub App Support Inquiry")
-                    try {
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Contact support at support@hostelhub.edu", Toast.LENGTH_LONG).show()
-                    }
-                }) {
-                    Text("Contact Support ✉", color = SecondaryTeal)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // 5. Compact Collapsible Help Centre & FAQs (Collapsed by Default)
             val faqs = listOf(
-                Pair("How do I pay hostel fees in Indian Rupees (₹)?", "Navigate to 'Pay Fees' from your dashboard or bottom navigation. You will see your live balance in ₹. Tap 'Pay Pending Dues' to select full or partial settlement."),
+                Pair("How do I pay hostel fees in Indian Rupees (₹)?", "Navigate to 'Fees' from your dashboard or bottom navigation. You will see your live balance in ₹. Tap 'Pay Pending Dues' to select full or partial settlement."),
                 Pair("How are rooms and beds allocated by the hostel owner?", "The hostel owner assigns rooms directly via the Host Portal. Once assigned, your Room Number and Bed ID will update automatically on your dashboard."),
                 Pair("How do I submit and track a maintenance complaint?", "Tap 'Complaints' from the dashboard quick actions or bottom navigation. Fill in the title, category, and issue description. The warden will be notified immediately."),
                 Pair("When is the weekly food menu updated?", "The catering team and hostel owner publish the 7-day meal plan every week. You can see today's breakfast, lunch, and dinner directly on your dashboard.")
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                faqs.forEachIndexed { index, faq ->
-                    val isExpanded = selectedFaqIndex == index
-                    AppCard(
-                        padding = 14.dp,
-                        onClick = { selectedFaqIndex = if (isExpanded) null else index }
+            AppCard(
+                padding = 16.dp,
+                onClick = { isFaqSectionExpanded = !isFaqSectionExpanded }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(SecondaryContainer, shape = CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.HelpOutline,
-                                    contentDescription = null,
-                                    tint = SecondaryTeal,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = faq.first,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
                             Icon(
-                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = SecondaryTeal,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Help Centre & FAQs",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isFaqSectionExpanded) "Tap to collapse FAQ answers" else "Tap to view frequently asked questions",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = if (isFaqSectionExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isFaqSectionExpanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-                        AnimatedVisibility(visible = isExpanded) {
-                            Column(modifier = Modifier.padding(top = 10.dp)) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = faq.second,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                AnimatedVisibility(visible = isFaqSectionExpanded) {
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        faqs.forEachIndexed { index, faq ->
+                            val isQuestionExpanded = selectedFaqIndex == index
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { selectedFaqIndex = if (isQuestionExpanded) null else index }
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = faq.first,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Icon(
+                                            imageVector = if (isQuestionExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null,
+                                            tint = SecondaryTeal,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    AnimatedVisibility(visible = isQuestionExpanded) {
+                                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = faq.second,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = {
+                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@hostelhub.edu"))
+                                intent.putExtra(Intent.EXTRA_SUBJECT, "HostelHub App Support Inquiry")
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Contact support at support@hostelhub.edu", Toast.LENGTH_LONG).show()
+                                }
+                            }) {
+                                Text("Contact Support ✉", color = SecondaryTeal, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -873,7 +807,6 @@ fun SettingsScreen(
                             Toast.makeText(context, "New passwords do not match", Toast.LENGTH_SHORT).show()
                         } else {
                             isUpdating = true
-                            // Simulate or invoke password update
                             coroutineScope.launch {
                                 kotlinx.coroutines.delay(600)
                                 isUpdating = false

@@ -17,10 +17,10 @@ import com.hostelhub.app.presentation.components.AppButton
 import com.hostelhub.app.presentation.components.AppCard
 import com.hostelhub.app.presentation.components.AppTopBar
 import com.hostelhub.app.presentation.components.ButtonVariant
-import com.hostelhub.app.presentation.theme.BackgroundCool
 import com.hostelhub.app.presentation.theme.PrimaryContainer
 import com.hostelhub.app.presentation.theme.PrimaryNavy
 import com.hostelhub.app.presentation.theme.SecondaryTeal
+import com.hostelhub.app.presentation.theme.StudentBackground
 import com.hostelhub.app.utils.UiState
 
 @Composable
@@ -68,7 +68,7 @@ fun StudentProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundCool)
+                    .background(StudentBackground)
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),

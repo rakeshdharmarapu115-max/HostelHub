@@ -21,10 +21,10 @@ import com.hostelhub.app.presentation.components.AppTopBar
 import com.hostelhub.app.presentation.components.BadgeStatusType
 import com.hostelhub.app.presentation.components.FilterChipRow
 import com.hostelhub.app.presentation.components.StatusBadge
-import com.hostelhub.app.presentation.theme.BackgroundCool
 import com.hostelhub.app.presentation.theme.PrimaryNavy
 import com.hostelhub.app.presentation.theme.SecondaryContainer
 import com.hostelhub.app.presentation.theme.SecondaryTeal
+import com.hostelhub.app.presentation.theme.StudentBackground
 import com.hostelhub.app.utils.UiState
 
 @Composable
@@ -59,7 +59,7 @@ fun StudentFoodMenuScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)

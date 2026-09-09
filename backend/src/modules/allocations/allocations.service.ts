@@ -23,47 +23,69 @@ export class AllocationsService {
     remarks?: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      // 1. Verify Bed
-      let bed = await tx.bed.findUnique({
-        where: { id: data.bedId },
-        include: { room: true }
+      // 1. Resolve Room first (by ID or room number)
+      const cleanRoomId = (data.roomId || '').trim();
+      let room = await tx.room.findFirst({
+        where: {
+          OR: [
+            { id: cleanRoomId },
+            { roomNumber: cleanRoomId }
+          ]
+        },
+        include: { beds: true, hostel: true }
       });
 
+      if (!room) {
+        throw { status: 404, message: `Room not found for ID/Number: ${data.roomId}` };
+      }
+
+      // If room has no beds created yet, auto-create them according to capacity
+      if (!room.beds || room.beds.length === 0) {
+        const bedLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const bedsToCreate = [];
+        for (let i = 0; i < (room.totalCapacity || 2); i++) {
+          bedsToCreate.push({
+            roomId: room.id,
+            bedNumber: `Bed-${bedLetters[i] || (i + 1)}`,
+            isOccupied: false
+          });
+        }
+        await tx.bed.createMany({ data: bedsToCreate });
+        const refreshedRoom = await tx.room.findUnique({
+          where: { id: room.id },
+          include: { beds: true, hostel: true }
+        });
+        if (refreshedRoom) room = refreshedRoom;
+      }
+
+      // 2. Resolve Bed inside this Room
+      const cleanBedId = (data.bedId || '').trim();
+      let bed: any = room.beds.find((b: any) =>
+        b.id === cleanBedId ||
+        b.bedNumber.toLowerCase() === cleanBedId.toLowerCase() ||
+        b.bedNumber.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanBedId.toLowerCase().replace(/[^a-z0-9]/g, '')
+      );
+
+      // If bed not matched by identifier, pick first unoccupied bed in the room
+      if (!bed) {
+        bed = room.beds.find((b: any) => !b.isOccupied);
+      }
+
+      // If still not found, check if we can query directly
       if (!bed) {
         bed = await tx.bed.findFirst({
           where: {
             OR: [
-              { id: data.bedId },
-              { bedNumber: data.bedId }
-            ],
-            ...(data.roomId ? { roomId: data.roomId } : {})
-          },
-          include: { room: true }
-        });
-      }
-
-      if (!bed) {
-        throw { status: 404, message: `Bed not found for ID: ${data.bedId}` };
-      }
-
-      // 2. Verify Room
-      let room = await tx.room.findUnique({
-        where: { id: data.roomId || bed.roomId }
-      });
-
-      if (!room) {
-        room = await tx.room.findFirst({
-          where: {
-            OR: [
-              { id: data.roomId },
-              { roomNumber: data.roomId }
+              { id: cleanBedId },
+              { bedNumber: cleanBedId },
+              { bedNumber: { equals: cleanBedId, mode: 'insensitive' } }
             ]
           }
         });
       }
 
-      if (!room) {
-        throw { status: 404, message: `Room not found for ID: ${data.roomId}` };
+      if (!bed) {
+        throw { status: 404, message: `Bed '${data.bedId}' not found in Room ${room.roomNumber}` };
       }
 
       // 3. Verify / Find Student
@@ -85,14 +107,14 @@ export class AllocationsService {
       });
 
       if (!student) {
-        // Auto-create student record if owner entered a new student
+        // Auto-create student record if owner entered a new student identifier
         const email = cleanStudentId.includes('@')
           ? cleanStudentId
           : `student_${Date.now().toString().slice(-6)}@campus.edu`;
 
         const existingUser = await tx.user.findUnique({ where: { email } });
         const finalEmail = existingUser ? `student_${Date.now()}@campus.edu` : email;
-        
+
         const user = await tx.user.create({
           data: {
             email: finalEmail,
@@ -104,9 +126,8 @@ export class AllocationsService {
         });
 
         // Ensure rollNumber is unique
-        let rollNumber = cleanStudentId;
-        const existingRoll = await tx.student.findUnique({ where: { rollNumber } });
-        if (existingRoll) {
+        let rollNumber = cleanStudentId.startsWith('STU-') ? cleanStudentId : `STU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        while (await tx.student.findUnique({ where: { rollNumber } })) {
           rollNumber = `STU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
@@ -159,13 +180,16 @@ export class AllocationsService {
         }
 
         if (prev.roomId && prev.roomId !== room.id) {
+          const actualOldOccupied = await tx.bed.count({
+            where: { roomId: prev.roomId, isOccupied: true }
+          });
           const oldRoom = await tx.room.findUnique({ where: { id: prev.roomId } });
           if (oldRoom) {
             await tx.room.update({
-              where: { id: oldRoom.id },
+              where: { id: prev.roomId },
               data: {
-                occupiedCount: Math.max(0, oldRoom.occupiedCount - 1),
-                status: RoomStatus.AVAILABLE
+                occupiedCount: Math.max(0, actualOldOccupied),
+                status: actualOldOccupied >= oldRoom.totalCapacity ? RoomStatus.FULL : RoomStatus.AVAILABLE
               }
             });
           }
@@ -173,7 +197,7 @@ export class AllocationsService {
       }
 
       const hostelId = room.hostelId;
-      const hostel = await tx.hostel.findUnique({ where: { id: hostelId } });
+      const hostelName = room.hostel?.name || 'Campus Hostel';
 
       // 5. Create RoomAllocation record
       let verifiedAllocatedBy: string | null = null;
@@ -201,8 +225,10 @@ export class AllocationsService {
         data: { isOccupied: true }
       });
 
-      // 7. Update Room
-      const newOccupiedCount = room.occupiedCount + 1;
+      // 7. Recalculate Room Occupancy accurately
+      const newOccupiedCount = await tx.bed.count({
+        where: { roomId: room.id, isOccupied: true }
+      });
       await tx.room.update({
         where: { id: room.id },
         data: {
@@ -216,7 +242,7 @@ export class AllocationsService {
         where: { id: student.id },
         data: {
           hostelId,
-          hostelName: hostel?.name,
+          hostelName,
           roomId: room.id,
           roomNumber: room.roomNumber,
           bedNumber: bed.bedNumber,
@@ -224,12 +250,18 @@ export class AllocationsService {
         }
       });
 
-      // 9. Update Hostel
+      // 9. Update Hostel Occupancy accurately
       if (hostelId) {
+        const totalOccupiedBedsInHostel = await tx.bed.count({
+          where: {
+            room: { hostelId },
+            isOccupied: true
+          }
+        });
         await tx.hostel.update({
           where: { id: hostelId },
           data: {
-            occupiedBeds: { increment: 1 }
+            occupiedBeds: totalOccupiedBedsInHostel
           }
         });
       }
@@ -246,6 +278,9 @@ export class AllocationsService {
         allocationDate: allocation.allocationDate.getTime(),
         status: allocation.status
       };
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
   }
 

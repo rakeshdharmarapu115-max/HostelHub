@@ -40,4 +40,31 @@ interface FeePaymentApi {
 
     @POST("payments")
     suspend fun recordPayment(@Body request: RecordPaymentRequestDto): Response<ApiResponse<PaymentDto>>
+
+    // Hostel Owner QR Payment Configuration Endpoints
+    @GET("payments/config/my-hostel")
+    suspend fun getMyHostelPaymentConfig(): Response<ApiResponse<HostelPaymentConfigDto>>
+
+    @GET("payments/config/hostel/{hostelId}")
+    suspend fun getHostelPaymentConfig(@Path("hostelId") hostelId: String): Response<ApiResponse<HostelPaymentConfigDto>>
+
+    @retrofit2.http.PUT("payments/config/hostel/{hostelId}")
+    suspend fun updateHostelPaymentConfig(
+        @Path("hostelId") hostelId: String,
+        @Body body: UpdatePaymentConfigRequestDto
+    ): Response<ApiResponse<HostelPaymentConfigDto>>
+
+    // Manual Static QR Submission & Verification Endpoints
+    @POST("payments/manual-qr")
+    suspend fun submitManualQrPayment(@Body request: ManualPaymentSubmissionRequestDto): Response<ApiResponse<PaymentDto>>
+
+    @retrofit2.http.PATCH("payments/{id}/verify-manual")
+    suspend fun verifyManualPayment(
+        @Path("id") paymentId: String,
+        @Body request: VerifyManualPaymentRequestDto
+    ): Response<ApiResponse<PaymentDto>>
+
+    // Admin Overview
+    @GET("payments/admin/overview")
+    suspend fun getAdminPaymentOverview(): Response<ApiResponse<List<AdminPaymentOverviewDto>>>
 }

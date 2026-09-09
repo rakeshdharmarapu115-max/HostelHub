@@ -2,8 +2,10 @@ package com.hostelhub.app.presentation.host
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hostelhub.app.data.remote.NetworkConfig
 import com.hostelhub.app.domain.model.*
 import com.hostelhub.app.domain.repository.*
+import com.hostelhub.app.utils.ImageUtils
 import com.hostelhub.app.utils.Resource
 import com.hostelhub.app.utils.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,11 +23,13 @@ class HostViewModel @Inject constructor(
     private val roomRepository: RoomRepository,
     private val studentRepository: StudentRepository,
     private val feePaymentRepository: FeePaymentRepository,
+    private val storageRepository: StorageRepository,
     private val complaintRepository: ComplaintRepository,
     private val attendanceRepository: AttendanceRepository,
     private val foodMenuRepository: FoodMenuRepository,
     private val announcementRepository: AnnouncementRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    val networkConfig: NetworkConfig
 ) : ViewModel() {
 
     private val _currentHostelId = MutableStateFlow("")
@@ -63,6 +67,9 @@ class HostViewModel @Inject constructor(
 
     private val _foodMenu = MutableStateFlow<UiState<FoodMenu>>(UiState.Loading)
     val foodMenu: StateFlow<UiState<FoodMenu>> = _foodMenu.asStateFlow()
+
+    private val _paymentConfig = MutableStateFlow<UiState<HostelPaymentConfig>>(UiState.Loading)
+    val paymentConfig: StateFlow<UiState<HostelPaymentConfig>> = _paymentConfig.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -112,6 +119,7 @@ class HostViewModel @Inject constructor(
         loadTodayAttendance(targetHostelId)
         loadAnnouncements(targetHostelId)
         loadFoodMenu(targetHostelId)
+        loadPaymentConfig(targetHostelId)
     }
 
     fun loadDashboardStats(hostelId: String) {
@@ -462,13 +470,25 @@ class HostViewModel @Inject constructor(
     fun generateStudentId(onResult: (String) -> Unit) {
         viewModelScope.launch {
             when (val res = studentRepository.generateStudentId()) {
-                is Resource.Success -> onResult(res.data)
+                is Resource.Success -> {
+                    if (res.data.isNotBlank()) {
+                        onResult(res.data)
+                    } else {
+                        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                        val rand = (1000..9999).random()
+                        onResult("STU-$year-$rand")
+                    }
+                }
                 is Resource.Error -> {
                     val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
                     val rand = (1000..9999).random()
                     onResult("STU-$year-$rand")
                 }
-                else -> {}
+                else -> {
+                    val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                    val rand = (1000..9999).random()
+                    onResult("STU-$year-$rand")
+                }
             }
         }
     }
@@ -479,17 +499,20 @@ class HostViewModel @Inject constructor(
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
+            val currentHId = _currentHostelId.value.ifBlank {
+                _currentUser.value?.hostelId ?: ""
+            }
             val resolvedStudent = if (student.hostelId.isNullOrBlank()) {
-                student.copy(hostelId = _currentHostelId.value)
+                student.copy(hostelId = currentHId)
             } else {
                 student
             }
             when (val res = studentRepository.createStudentByAdmin(resolvedStudent, "HostelResident@2026")) {
                 is Resource.Success -> {
-                    val currentHId = _currentHostelId.value.ifBlank { "hostel_001" }
-                    loadResidents(currentHId)
-                    loadRooms(currentHId)
-                    loadDashboardStats(currentHId)
+                    val targetHId = currentHId.ifBlank { res.data.hostelId ?: "hostel_001" }
+                    loadResidents(targetHId)
+                    loadRooms(targetHId)
+                    loadDashboardStats(targetHId)
                     onSuccess(res.data)
                 }
                 is Resource.Error -> {
@@ -539,6 +562,181 @@ class HostViewModel @Inject constructor(
                 is Resource.Success -> {
                     loadHostelInfo(currentHId)
                     loadDashboardStats(currentHId)
+                    onSuccess()
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun loadPaymentConfig(hostelId: String = "") {
+        val targetHId = hostelId.ifBlank { _currentHostelId.value.ifBlank { _currentUser.value?.hostelId ?: "" } }
+        if (targetHId.isBlank()) {
+            _paymentConfig.value = UiState.Error("Your hostel is not configured.")
+            return
+        }
+        viewModelScope.launch {
+            feePaymentRepository.getHostelPaymentConfig(targetHId).collect { res ->
+                _paymentConfig.value = when (res) {
+                    is Resource.Loading -> UiState.Loading
+                    is Resource.Success -> {
+                        if (_currentHostelId.value.isBlank() && res.data.hostelId.isNotBlank()) {
+                            _currentHostelId.value = res.data.hostelId
+                        }
+                        UiState.Success(res.data)
+                    }
+                    is Resource.Error -> UiState.Error(res.message)
+                }
+            }
+        }
+    }
+
+    fun updatePaymentConfig(
+        hostelId: String,
+        paymentAccountId: String? = null,
+        paymentAccountStatus: String? = null,
+        paymentQrUrl: String? = null,
+        qrPaymentEnabled: Boolean? = null,
+        upiId: String? = null,
+        merchantName: String? = null,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val targetHId = hostelId.ifBlank { _currentHostelId.value.ifBlank { _currentUser.value?.hostelId ?: "" } }
+        if (targetHId.isBlank()) {
+            onError("Your hostel is not configured.")
+            return
+        }
+        viewModelScope.launch {
+            val result = feePaymentRepository.updateHostelPaymentConfig(
+                hostelId = targetHId,
+                paymentAccountId = paymentAccountId,
+                paymentAccountStatus = paymentAccountStatus,
+                paymentQrUrl = paymentQrUrl,
+                qrPaymentEnabled = qrPaymentEnabled,
+                upiId = upiId,
+                merchantName = merchantName
+            )
+            when (result) {
+                is Resource.Success -> {
+                    _paymentConfig.value = UiState.Success(result.data)
+                    loadHostelInfo(targetHId)
+                    onSuccess()
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun resolveImageUrl(rawUrl: String?): String {
+        return ImageUtils.resolveFullImageUrl(rawUrl, networkConfig.getBaseUrl())
+    }
+
+    fun uploadPaymentQr(
+        uri: android.net.Uri,
+        context: android.content.Context,
+        onSuccess: (String) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val targetHId = _currentHostelId.value.ifBlank { _currentUser.value?.hostelId ?: "" }
+            if (targetHId.isBlank()) {
+                onError("Your hostel is not configured.")
+                return@launch
+            }
+
+            val part = ImageUtils.createMultipartFromUri(context, uri, "file")
+            if (part == null) {
+                onError("Unable to read selected image from device.")
+                return@launch
+            }
+
+            val uploadResult = storageRepository.uploadPaymentQr(part)
+            when (uploadResult) {
+                is Resource.Success -> {
+                    val serverUrl = uploadResult.data.url
+                    val configResult = feePaymentRepository.updateHostelPaymentConfig(
+                        hostelId = targetHId,
+                        paymentQrUrl = serverUrl,
+                        qrPaymentEnabled = true
+                    )
+                    when (configResult) {
+                        is Resource.Success -> {
+                            _paymentConfig.value = UiState.Success(configResult.data)
+                            loadHostelInfo(targetHId)
+                            onSuccess(serverUrl)
+                        }
+                        is Resource.Error -> {
+                            onError(configResult.message)
+                        }
+                        is Resource.Loading -> {}
+                    }
+                }
+                is Resource.Error -> {
+                    onError(uploadResult.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun setDirectPaymentQrUrl(
+        qrUrl: String,
+        onSuccess: (String) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val targetHId = _currentHostelId.value.ifBlank { _currentUser.value?.hostelId ?: "" }
+            if (targetHId.isBlank()) {
+                onError("Your hostel is not configured.")
+                return@launch
+            }
+            val configResult = feePaymentRepository.updateHostelPaymentConfig(
+                hostelId = targetHId,
+                paymentQrUrl = qrUrl.trim(),
+                qrPaymentEnabled = true
+            )
+            when (configResult) {
+                is Resource.Success -> {
+                    _paymentConfig.value = UiState.Success(configResult.data)
+                    loadHostelInfo(targetHId)
+                    onSuccess(qrUrl)
+                }
+                is Resource.Error -> {
+                    onError(configResult.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun verifyManualPayment(
+        paymentId: String,
+        approved: Boolean,
+        remarks: String? = null,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val currentHId = _currentHostelId.value.ifBlank { _currentUser.value?.hostelId ?: "" }
+            val result = feePaymentRepository.verifyManualPayment(
+                paymentId = paymentId,
+                approved = approved,
+                remarks = remarks
+            )
+            when (result) {
+                is Resource.Success -> {
+                    if (currentHId.isNotBlank()) {
+                        loadPayments(currentHId)
+                        loadFees(currentHId)
+                        loadDashboardStats(currentHId)
+                    }
                     onSuccess()
                 }
                 is Resource.Error -> {

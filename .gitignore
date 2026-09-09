@@ -16,6 +16,7 @@ backend/.env
 backend/.env.production
 backend/*.db
 backend/*.log
+backend/uploads/
 # Environment and secrets
 *.env
 *.env.*

@@ -16,8 +16,8 @@ import com.hostelhub.app.presentation.components.AppCard
 import com.hostelhub.app.presentation.components.AppTextField
 import com.hostelhub.app.presentation.components.AppTopBar
 import com.hostelhub.app.presentation.components.FilterChipRow
-import com.hostelhub.app.presentation.theme.BackgroundCool
 import com.hostelhub.app.presentation.theme.PrimaryNavy
+import com.hostelhub.app.presentation.theme.StudentBackground
 import com.hostelhub.app.utils.FormValidators
 
 @Composable
@@ -48,7 +48,7 @@ fun NewComplaintScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)

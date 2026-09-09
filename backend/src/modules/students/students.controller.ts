@@ -16,6 +16,24 @@ export class StudentsController {
     }
   }
 
+  async getMyRoommates(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.userId || req.user?.profileId;
+      if (!userId) {
+        sendError(res, 'Unauthorized', 401);
+        return;
+      }
+      const result = await studentsService.getMyRoommates(userId);
+      sendSuccess(res, 'Room and roommates retrieved successfully', result);
+    } catch (error: any) {
+      if (error.status) {
+        sendError(res, error.message, error.status);
+      } else {
+        next(error);
+      }
+    }
+  }
+
   async getStudentById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const targetId = req.params.id;

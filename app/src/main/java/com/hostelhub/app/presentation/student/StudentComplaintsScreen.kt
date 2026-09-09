@@ -72,7 +72,7 @@ fun StudentComplaintsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {

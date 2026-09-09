@@ -29,6 +29,7 @@ interface StudentRepository {
     suspend fun createStudentByAdmin(student: Student, password: String): Resource<Student>
     suspend fun deallocateStudent(studentId: String, remarks: String = ""): Resource<Student>
     fun getStudentDashboardStats(studentId: String): Flow<Resource<StudentDashboardStats>>
+    fun getMyRoommates(): Flow<Resource<MyRoomDetails>>
 }
 
 interface HostelRepository {
@@ -88,6 +89,30 @@ interface FeePaymentRepository {
     suspend fun recordPaymentFailure(feeId: String, razorpayOrderId: String?, razorpayPaymentId: String?, errorMessage: String?): Resource<Payment>
     suspend fun recordPayment(payment: Payment): Resource<Payment>
     suspend fun createFee(fee: Fee): Resource<Fee>
+    fun getMyHostelPaymentConfig(): Flow<Resource<HostelPaymentConfig>>
+    fun getHostelPaymentConfig(hostelId: String): Flow<Resource<HostelPaymentConfig>>
+    suspend fun updateHostelPaymentConfig(
+        hostelId: String,
+        paymentAccountId: String? = null,
+        paymentAccountStatus: String? = null,
+        paymentQrUrl: String? = null,
+        qrPaymentEnabled: Boolean? = null,
+        upiId: String? = null,
+        merchantName: String? = null
+    ): Resource<HostelPaymentConfig>
+    suspend fun submitManualQrPayment(
+        feeId: String,
+        amountPaid: Double,
+        transactionReference: String,
+        remarks: String? = null,
+        receiptUrl: String? = null
+    ): Resource<Payment>
+    suspend fun verifyManualPayment(
+        paymentId: String,
+        approved: Boolean,
+        remarks: String? = null
+    ): Resource<Payment>
+    fun getAdminPaymentOverview(): Flow<Resource<List<AdminPaymentOverviewItem>>>
 }
 
 interface ComplaintRepository {
@@ -127,4 +152,9 @@ interface AnnouncementRepository {
 interface NotificationRepository {
     fun getNotifications(userId: String): Flow<Resource<List<AppNotification>>>
     suspend fun markAsRead(notificationId: String): Resource<Unit>
+}
+
+interface StorageRepository {
+    suspend fun uploadPaymentQr(filePart: okhttp3.MultipartBody.Part): Resource<com.hostelhub.app.data.remote.dto.StorageUploadResponseDto>
+    suspend fun uploadFile(filePart: okhttp3.MultipartBody.Part): Resource<com.hostelhub.app.data.remote.dto.StorageUploadResponseDto>
 }

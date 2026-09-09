@@ -79,7 +79,13 @@ export async function autoSeedIfEmpty(): Promise<void> {
         rating: 4.8,
         ratingCount: 124,
         contactEmail: 'warden@greenvalley.edu',
-        contactPhone: '+1 555-HOSTEL'
+        contactPhone: '+1 555-HOSTEL',
+        paymentAccountId: 'acc_gv_987654',
+        paymentAccountStatus: 'ACTIVE',
+        paymentQrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR',
+        qrPaymentEnabled: true,
+        upiId: 'greenvalley.hostel@hdfcbank',
+        merchantName: 'Green Valley Residencies'
       }
     });
 

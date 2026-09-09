@@ -12,6 +12,7 @@ router.use(authenticate);
 // Room routes
 router.get('/hostel/:hostelId', (req, res, next) => roomsController.getRoomsByHostel(req, res, next));
 router.post('/hostel/:hostelId', authorize(UserRole.ADMIN, UserRole.HOST), (req, res, next) => roomsController.addRoom(req, res, next));
+router.post('/', authorize(UserRole.ADMIN, UserRole.HOST), (req, res, next) => roomsController.addRoom(req, res, next));
 router.get('/:id', (req, res, next) => roomsController.getRoomById(req, res, next));
 router.patch('/:id', authorize(UserRole.ADMIN, UserRole.HOST), (req, res, next) => roomsController.updateRoom(req, res, next));
 router.delete('/:id', authorize(UserRole.ADMIN, UserRole.HOST), (req, res, next) => roomsController.deleteRoom(req, res, next));

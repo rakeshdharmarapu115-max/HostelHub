@@ -1,15 +1,22 @@
 package com.hostelhub.app.presentation.student
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hostelhub.app.data.remote.NetworkConfig
 import com.hostelhub.app.domain.model.*
 import com.hostelhub.app.domain.repository.*
+import com.hostelhub.app.utils.ImageUtils
 import com.hostelhub.app.utils.Resource
 import com.hostelhub.app.utils.UiState
+import com.hostelhub.app.payment.RazorpayPaymentBridge
+import com.hostelhub.app.payment.RazorpayResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,7 +32,9 @@ class StudentViewModel @Inject constructor(
     private val foodMenuRepository: FoodMenuRepository,
     private val hostelRepository: HostelRepository,
     private val notificationRepository: NotificationRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    val razorpayPaymentBridge: RazorpayPaymentBridge,
+    val networkConfig: NetworkConfig
 ) : ViewModel() {
 
     private val _currentStudentId = MutableStateFlow("")
@@ -40,6 +49,9 @@ class StudentViewModel @Inject constructor(
     private val _room = MutableStateFlow<UiState<Room>>(UiState.Idle)
     val room: StateFlow<UiState<Room>> = _room.asStateFlow()
     val roomDetails: StateFlow<UiState<Room>> = _room.asStateFlow()
+
+    private val _myRoomDetails = MutableStateFlow<UiState<MyRoomDetails>>(UiState.Idle)
+    val myRoomDetails: StateFlow<UiState<MyRoomDetails>> = _myRoomDetails.asStateFlow()
 
     private val _fees = MutableStateFlow<UiState<List<Fee>>>(UiState.Loading)
     val fees: StateFlow<UiState<List<Fee>>> = _fees.asStateFlow()
@@ -65,6 +77,9 @@ class StudentViewModel @Inject constructor(
     private val _notifications = MutableStateFlow<UiState<List<AppNotification>>>(UiState.Loading)
     val notifications: StateFlow<UiState<List<AppNotification>>> = _notifications.asStateFlow()
 
+    private val _hostelPaymentConfig = MutableStateFlow<UiState<HostelPaymentConfig>>(UiState.Loading)
+    val hostelPaymentConfig: StateFlow<UiState<HostelPaymentConfig>> = _hostelPaymentConfig.asStateFlow()
+
     init {
         viewModelScope.launch {
             authRepository.getCurrentUser().collect { user ->
@@ -87,6 +102,7 @@ class StudentViewModel @Inject constructor(
     fun loadStudentData(studentId: String) {
         if (studentId.isBlank()) return
         loadProfile(studentId)
+        loadMyRoomDetails()
         loadDashboardStats(studentId)
         loadFees(studentId)
         loadPayments(studentId)
@@ -94,6 +110,25 @@ class StudentViewModel @Inject constructor(
         loadFoodMenu("hostel_001")
         loadHostels()
         loadNotifications(studentId)
+        loadHostelPaymentConfig()
+    }
+
+    fun loadMyRoomDetails() {
+        viewModelScope.launch {
+            _myRoomDetails.value = UiState.Loading
+            studentRepository.getMyRoommates().collect { res ->
+                _myRoomDetails.value = when (res) {
+                    is Resource.Loading -> UiState.Loading
+                    is Resource.Success -> {
+                        if (res.data.room != null) {
+                            _room.value = UiState.Success(res.data.room)
+                        }
+                        UiState.Success(res.data)
+                    }
+                    is Resource.Error -> UiState.Error(res.message)
+                }
+            }
+        }
     }
 
     fun loadProfile(studentId: String) {
@@ -348,6 +383,76 @@ class StudentViewModel @Inject constructor(
         }
     }
 
+    private var paymentResultJob: Job? = null
+
+    fun initiateRazorpayPayment(
+        activity: Activity,
+        feeId: String,
+        amount: Double,
+        onSuccess: (Payment) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            paymentResultJob?.cancel()
+
+            val orderResult = feePaymentRepository.createRazorpayOrder(feeId, amount)
+            if (orderResult !is Resource.Success) {
+                onError((orderResult as? Resource.Error)?.message ?: "Failed to create Razorpay payment order")
+                return@launch
+            }
+
+            val orderDto = orderResult.data
+            val student = (_studentProfile.value as? UiState.Success)?.data
+
+            paymentResultJob = viewModelScope.launch {
+                razorpayPaymentBridge.paymentResultFlow.collectLatest { result ->
+                    when (result) {
+                        is RazorpayResult.Success -> {
+                            if (result.feeId == feeId || result.razorpayOrderId == orderDto.orderId) {
+                                verifyRazorpayPayment(
+                                    feeId = feeId,
+                                    razorpayOrderId = result.razorpayOrderId,
+                                    razorpayPaymentId = result.razorpayPaymentId,
+                                    razorpaySignature = result.razorpaySignature,
+                                    amountPaid = result.amountPaid,
+                                    onSuccess = { payment ->
+                                        onSuccess(payment)
+                                        paymentResultJob?.cancel()
+                                    },
+                                    onError = { err ->
+                                        onError("Payment verification failed: $err")
+                                        paymentResultJob?.cancel()
+                                    }
+                                )
+                            }
+                        }
+                        is RazorpayResult.Error -> {
+                            if (result.feeId == feeId || result.razorpayOrderId == orderDto.orderId) {
+                                recordPaymentFailure(feeId, result.razorpayOrderId, result.razorpayPaymentId, result.message)
+                                onError(result.message)
+                                paymentResultJob?.cancel()
+                            }
+                        }
+                        is RazorpayResult.Cancelled -> {
+                            if (result.feeId == feeId) {
+                                recordPaymentFailure(feeId, orderDto.orderId, null, result.message)
+                                onError(result.message)
+                                paymentResultJob?.cancel()
+                            }
+                        }
+                    }
+                }
+            }
+
+            razorpayPaymentBridge.startCheckout(
+                activity = activity,
+                order = orderDto,
+                prefillEmail = student?.email?.ifBlank { null },
+                prefillPhone = student?.emergencyContactPhone?.ifBlank { null }
+            )
+        }
+    }
+
     fun createRazorpayOrder(
         feeId: String,
         amount: Double?,
@@ -435,6 +540,52 @@ class StudentViewModel @Inject constructor(
         }
     }
 
+    fun payMoneyToOwner(
+        amount: Double,
+        pin: String,
+        feeId: String? = null,
+        paymentMethod: PaymentMethod = PaymentMethod.UPI,
+        onSuccess: (Payment) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        if (pin.length < 4) {
+            onError("Please enter a valid 4-digit or 6-digit security PIN")
+            return
+        }
+        if (amount <= 0) {
+            onError("Please enter a valid amount")
+            return
+        }
+        viewModelScope.launch {
+            val student = (_studentProfile.value as? UiState.Success)?.data
+            val currentSId = _currentStudentId.value
+            val resolvedFeeId = feeId ?: ((_fees.value as? UiState.Success)?.data?.firstOrNull { it.status != FeeStatus.PAID }?.feeId ?: "fee_owner_direct")
+            val payment = Payment(
+                paymentId = "pay_direct_${System.currentTimeMillis()}",
+                feeId = resolvedFeeId,
+                studentId = currentSId,
+                hostelId = student?.hostelId?.ifBlank { "hostel_001" } ?: "hostel_001",
+                amountPaid = amount,
+                paymentMethod = paymentMethod,
+                transactionReference = "TXN-OWNER-" + (100000..999999).random(),
+                status = PaymentStatus.SUCCESS
+            )
+            val result = feePaymentRepository.recordPayment(payment)
+            when (result) {
+                is Resource.Success -> {
+                    loadFees(currentSId)
+                    loadPayments(currentSId)
+                    loadDashboardStats(currentSId)
+                    onSuccess(payment)
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
     fun markSelfAttendance(status: AttendanceStatus = AttendanceStatus.PRESENT, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val student = (_studentProfile.value as? UiState.Success)?.data
@@ -490,5 +641,54 @@ class StudentViewModel @Inject constructor(
                 is Resource.Loading -> {}
             }
         }
+    }
+
+    fun loadHostelPaymentConfig() {
+        viewModelScope.launch {
+            feePaymentRepository.getMyHostelPaymentConfig().collect { res ->
+                _hostelPaymentConfig.value = when (res) {
+                    is Resource.Loading -> UiState.Loading
+                    is Resource.Success -> UiState.Success(res.data)
+                    is Resource.Error -> UiState.Error(res.message)
+                }
+            }
+        }
+    }
+
+    fun submitManualQrPayment(
+        feeId: String,
+        amountPaid: Double,
+        transactionReference: String,
+        remarks: String? = null,
+        receiptUrl: String? = null,
+        onSuccess: (Payment) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = feePaymentRepository.submitManualQrPayment(
+                feeId = feeId,
+                amountPaid = amountPaid,
+                transactionReference = transactionReference,
+                remarks = remarks,
+                receiptUrl = receiptUrl
+            )
+            when (result) {
+                is Resource.Success -> {
+                    val currentSId = _currentStudentId.value
+                    loadFees(currentSId)
+                    loadPayments(currentSId)
+                    loadDashboardStats(currentSId)
+                    onSuccess(result.data)
+                }
+                is Resource.Error -> {
+                    onError(result.message)
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun resolveImageUrl(rawUrl: String?): String {
+        return ImageUtils.resolveFullImageUrl(rawUrl, networkConfig.getBaseUrl())
     }
 }

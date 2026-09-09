@@ -69,7 +69,7 @@ fun AdminAnalyticsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 1. Core KPIs
+            // Exactly 4 Primary Analysis Dashboard Metric Cards (2x2 Grid)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -85,12 +85,12 @@ fun AdminAnalyticsScreen(
                     title = "Average Occupancy",
                     value = "${(overallOccupancyRate * 100).toInt()}%",
                     icon = Icons.Default.Bed,
-                    subtitle = "High Demand",
+                    subtitle = "${stats.occupiedBeds} / ${stats.totalBeds} Beds Allotted",
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -107,94 +107,10 @@ fun AdminAnalyticsScreen(
                     title = "Fee Collection Rate",
                     value = "96.8%",
                     icon = Icons.Default.Payment,
-                    subtitle = "Campus Compliance",
+                    subtitle = "${Formatters.formatCurrencyNoDecimals(stats.totalRevenue)} Realized",
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 2. Student Distribution & Capacity by Property
-            Text(
-                text = "Hostel Capacity & Student Density",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            AppCard(padding = 16.dp) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    hostels.forEach { h ->
-                        val occ = if (h.totalBeds > 0) (h.occupiedBeds.toFloat() / h.totalBeds) else 0.85f
-                        val pct = (occ * 100).toInt()
-                        AnalyticsProgressRow(
-                            title = h.name,
-                            value = "${h.occupiedBeds}/${h.totalBeds} Beds ($pct%)",
-                            progress = occ
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 3. Operational & Regulatory Compliance Health
-            Text(
-                text = "Regulatory & Governance Health",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            AppCard(padding = 16.dp) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AnalyticsProgressRow("Fire & Safety Clearance", "100% Certified", 1.0f)
-                    AnalyticsProgressRow("Sanitation & Hygiene Standards", "98.5% Compliant", 0.985f)
-                    AnalyticsProgressRow("Fee Collection Settlement", "${Formatters.formatCurrencyNoDecimals(stats.totalRevenue)} Realized", 0.968f)
-                    AnalyticsProgressRow("Grievance Clearance Rate", "${stats.pendingComplaints} Pending in Queue", 0.91f)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
         }
-    }
-}
-
-@Composable
-private fun AnalyticsProgressRow(
-    title: String,
-    value: String,
-    progress: Float
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = AdminOnAccentContainer
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(7.dp),
-            color = AdminAccent,
-            trackColor = AdminAccentContainer,
-        )
     }
 }

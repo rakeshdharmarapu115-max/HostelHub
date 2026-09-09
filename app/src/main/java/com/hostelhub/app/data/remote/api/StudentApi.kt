@@ -36,4 +36,7 @@ interface StudentApi {
 
     @GET("dashboard/student")
     suspend fun getStudentDashboardStats(@Query("studentId") studentId: String): Response<ApiResponse<StudentDashboardStatsDto>>
+
+    @GET("students/my-roommates")
+    suspend fun getMyRoommates(): Response<ApiResponse<com.hostelhub.app.data.remote.dto.MyRoomResponseDto>>
 }

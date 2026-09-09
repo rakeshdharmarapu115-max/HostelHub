@@ -64,6 +64,17 @@ object FormValidators {
         }
         return ValidationResult(isValid = true)
     }
+
+    fun validateUpiId(upiId: String): ValidationResult {
+        if (upiId.isBlank()) {
+            return ValidationResult(isValid = false, errorMessage = "UPI ID cannot be blank")
+        }
+        val upiPattern = "^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$".toRegex()
+        if (!upiPattern.matches(upiId.trim())) {
+            return ValidationResult(isValid = false, errorMessage = "Invalid UPI ID format. Expected: username@bank or mobile@upi (e.g. name@okhdfcbank)")
+        }
+        return ValidationResult(isValid = true)
+    }
 }
 
 data class ValidationResult(

@@ -24,10 +24,36 @@ data class Hostel(
     val ratingCount: Int = 0,
     val contactEmail: String = "",
     val contactPhone: String = "",
+    val paymentAccountId: String? = null,
+    val paymentAccountStatus: String = "ACTIVE",
+    val paymentQrUrl: String? = null,
+    val qrPaymentEnabled: Boolean = true,
+    val upiId: String? = null,
+    val merchantName: String? = null,
     val distanceKm: Double? = null,
     val availableBeds: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val reviews: List<HostelReview> = emptyList()
+)
+
+data class HostelPaymentConfig(
+    val hostelId: String = "",
+    val hostelName: String = "",
+    val hostId: String = "",
+    val hostName: String = "",
+    val hostContactPhone: String = "",
+    val hostContactEmail: String = "",
+    val paymentAccountId: String? = null,
+    val paymentAccountStatus: String = "ACTIVE",
+    val paymentQrUrl: String? = null,
+    val qrPaymentEnabled: Boolean = true,
+    val upiId: String? = null,
+    val merchantName: String? = null,
+    val studentId: String? = null,
+    val studentName: String? = null,
+    val studentRollNumber: String? = null,
+    val roomNumber: String? = null,
+    val totalPendingDues: Double = 0.0
 )
 
 data class HostelReview(

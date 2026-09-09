@@ -88,6 +88,12 @@ export class HostelsService {
     cautionDeposit?: number;
     contactEmail?: string;
     contactPhone?: string;
+    paymentAccountId?: string;
+    paymentAccountStatus?: string;
+    paymentQrUrl?: string;
+    qrPaymentEnabled?: boolean;
+    upiId?: string;
+    merchantName?: string;
   }) {
     const created = await prisma.hostel.create({
       data: {
@@ -109,7 +115,13 @@ export class HostelsService {
         baseMonthlyRent: data.baseMonthlyRent || 0.0,
         cautionDeposit: data.cautionDeposit || 0.0,
         contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone
+        contactPhone: data.contactPhone,
+        paymentAccountId: data.paymentAccountId || null,
+        paymentAccountStatus: data.paymentAccountStatus || 'ACTIVE',
+        paymentQrUrl: data.paymentQrUrl || null,
+        qrPaymentEnabled: data.qrPaymentEnabled !== undefined ? data.qrPaymentEnabled : true,
+        upiId: data.upiId || null,
+        merchantName: data.merchantName || null
       }
     });
 
@@ -435,6 +447,12 @@ export class HostelsService {
       ratingCount: h.ratingCount || 0,
       contactEmail: h.contactEmail || '',
       contactPhone: h.contactPhone || '',
+      paymentAccountId: h.paymentAccountId || null,
+      paymentAccountStatus: h.paymentAccountStatus || 'ACTIVE',
+      paymentQrUrl: h.paymentQrUrl || null,
+      qrPaymentEnabled: h.qrPaymentEnabled !== undefined ? h.qrPaymentEnabled : true,
+      upiId: h.upiId || null,
+      merchantName: h.merchantName || null,
       createdAt: h.createdAt.getTime(),
       reviews: h.reviews?.map((r: any) => ({
         reviewId: r.id,

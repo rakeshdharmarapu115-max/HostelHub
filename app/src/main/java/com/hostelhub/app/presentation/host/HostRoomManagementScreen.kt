@@ -17,7 +17,7 @@ import com.hostelhub.app.domain.model.Room
 import com.hostelhub.app.domain.model.RoomStatus
 import com.hostelhub.app.domain.model.RoomType
 import com.hostelhub.app.presentation.components.*
-import com.hostelhub.app.presentation.theme.BackgroundCool
+import com.hostelhub.app.presentation.theme.HostBackground
 import com.hostelhub.app.presentation.theme.PrimaryNavy
 import com.hostelhub.app.presentation.theme.SecondaryTeal
 import com.hostelhub.app.utils.UiState
@@ -79,7 +79,7 @@ fun HostRoomManagementScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(HostBackground)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {

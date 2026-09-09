@@ -25,15 +25,35 @@ const upload = multer({
 router.get('/status', (req, res) => controller.getStorageStatus(req, res));
 
 // Upload general image / file
-router.post('/upload', authenticate, upload.single('file'), (req, res, next) => controller.uploadSingle(req, res, next));
+router.post('/upload', authenticate, upload.any(), (req, res, next) => {
+  console.log('[QR_UPLOAD_ROUTE_HIT] POST /storage/upload');
+  controller.uploadSingle(req, res, next);
+});
 
 // Upload user avatar
-router.post('/avatar', authenticate, upload.single('avatar'), (req, res, next) => controller.uploadAvatar(req, res, next));
+router.post('/avatar', authenticate, upload.any(), (req, res, next) => controller.uploadAvatar(req, res, next));
 
 // Upload payment receipt
-router.post('/receipt', authenticate, upload.single('receipt'), (req, res, next) => controller.uploadReceipt(req, res, next));
+router.post('/receipt', authenticate, upload.any(), (req, res, next) => controller.uploadReceipt(req, res, next));
 
 // Upload hostel room / building gallery images
 router.post('/hostel-images', authenticate, upload.array('images', 10), (req, res, next) => controller.uploadHostelImages(req, res, next));
 
+// Upload hostel owner official payment QR code (supports multiple paths & field names)
+router.post('/payment-qr', authenticate, upload.any(), (req, res, next) => {
+  console.log('[QR_UPLOAD_ROUTE_HIT] POST /storage/payment-qr');
+  controller.uploadPaymentQr(req, res, next);
+});
+
+router.post('/qr', authenticate, upload.any(), (req, res, next) => {
+  console.log('[QR_UPLOAD_ROUTE_HIT] POST /storage/qr');
+  controller.uploadPaymentQr(req, res, next);
+});
+
+router.post('/payment/qr', authenticate, upload.any(), (req, res, next) => {
+  console.log('[QR_UPLOAD_ROUTE_HIT] POST /storage/payment/qr');
+  controller.uploadPaymentQr(req, res, next);
+});
+
 export default router;
+

@@ -13,15 +13,19 @@ import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import com.hostelhub.app.data.local.AppSettingsManager
 import com.hostelhub.app.data.local.ThemeMode
+import com.hostelhub.app.payment.RazorpayPaymentBridge
 import com.hostelhub.app.presentation.navigation.AppNavHost
 import com.hostelhub.app.presentation.security.AppLockScreen
 import com.hostelhub.app.presentation.theme.HostelManagementTheme
 import com.hostelhub.app.security.AppLockManager
+import com.razorpay.Checkout
+import com.razorpay.PaymentData
+import com.razorpay.PaymentResultWithDataListener
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() {
+class MainActivity : FragmentActivity(), PaymentResultWithDataListener {
 
     @Inject
     lateinit var appSettingsManager: AppSettingsManager
@@ -29,8 +33,12 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var appLockManager: AppLockManager
 
+    @Inject
+    lateinit var razorpayPaymentBridge: RazorpayPaymentBridge
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Checkout.preload(applicationContext)
         enableEdgeToEdge()
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsState()
@@ -68,5 +76,13 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         appLockManager.onAppBackgrounded()
+    }
+
+    override fun onPaymentSuccess(razorpayPaymentId: String?, paymentData: PaymentData?) {
+        razorpayPaymentBridge.onPaymentSuccess(razorpayPaymentId, paymentData)
+    }
+
+    override fun onPaymentError(errorCode: Int, response: String?, paymentData: PaymentData?) {
+        razorpayPaymentBridge.onPaymentError(errorCode, response, paymentData)
     }
 }

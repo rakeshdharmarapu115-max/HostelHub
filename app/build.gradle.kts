@@ -101,6 +101,9 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
 
+    // Razorpay Payment Gateway SDK
+    implementation(libs.razorpay)
+
     // Unit tests
     testImplementation(libs.junit)
 

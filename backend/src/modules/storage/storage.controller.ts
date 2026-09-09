@@ -6,6 +6,9 @@ import { isCloudinaryConfigured } from '../../config/storage.config';
 export class StorageController {
   async getStorageStatus(req: Request, res: Response): Promise<void> {
     sendSuccess(res, 'Storage service status retrieved', {
+      storageRouteAvailable: true,
+      backendVersion: '2.1.0',
+      qrUploadRouteVersion: 'payment-qr-v2',
       configured: isCloudinaryConfigured,
       activeProvider: isCloudinaryConfigured ? 'cloudinary' : 'local_data_uri',
       supportedFeatures: [
@@ -19,7 +22,7 @@ export class StorageController {
 
   async uploadSingle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const file = (req as any).file;
+      const file = (req as any).file || ((req as any).files && (req as any).files[0]);
       const folder = (req.body.folder as string) || 'general';
 
       if (!file) {
@@ -137,6 +140,53 @@ export class StorageController {
         urls,
         count: urls.length
       }, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async uploadPaymentQr(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const file = (req as any).file || ((req as any).files && (req as any).files[0]);
+      if (!file && !req.body.image && !req.body.qrUrl) {
+        sendError(res, 'Payment QR image file or data is required', 400);
+        return;
+      }
+
+      let result;
+      if (file) {
+        // Validate MIME type strictly
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedMimes.includes(file.mimetype)) {
+          sendError(res, 'Invalid file type. Only JPEG, PNG, WEBP, and GIF images are allowed.', 400);
+          return;
+        }
+
+        // Validate file size (max 5MB for QR)
+        if (file.size > 5 * 1024 * 1024) {
+          sendError(res, 'File size exceeds maximum limit of 5MB.', 400);
+          return;
+        }
+
+        const ext = file.mimetype.split('/')[1] || 'png';
+        const cleanExt = ext.replace('jpeg', 'jpg');
+        const safeFilename = `qr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${cleanExt}`;
+
+        result = await storageService.uploadFile(file.buffer, {
+          folder: 'payment_qrs',
+          filename: safeFilename,
+          mimeType: file.mimetype,
+          transformation: [
+            { width: 600, height: 600, crop: 'limit' },
+            { quality: 'auto', fetch_format: 'auto' }
+          ]
+        });
+      } else {
+        const raw = req.body.image || req.body.qrUrl;
+        result = await storageService.uploadBase64OrUrl(raw, 'payment_qrs');
+      }
+
+      sendSuccess(res, 'Hostel payment QR code uploaded successfully', result, 201);
     } catch (error) {
       next(error);
     }

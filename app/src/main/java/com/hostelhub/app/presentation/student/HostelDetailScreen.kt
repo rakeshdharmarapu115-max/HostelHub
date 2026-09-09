@@ -122,7 +122,7 @@ fun HostelDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
@@ -142,6 +142,7 @@ fun HostelDetailScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(hostel.images) { imageUrl ->
+                        val resolvedUrl = studentViewModel?.resolveImageUrl(imageUrl) ?: imageUrl
                         Box(
                             modifier = Modifier
                                 .width(280.dp)
@@ -150,8 +151,8 @@ fun HostelDetailScreen(
                                 .background(PrimaryNavy)
                         ) {
                             AsyncImage(
-                                model = imageUrl,
-                                contentDescription = "Hostel Image",
+                                model = resolvedUrl,
+                                contentDescription = hostel.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )

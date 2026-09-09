@@ -24,7 +24,7 @@ fun AppTopBar(
     canNavigateBack: Boolean = false,
     onNavigateBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    backgroundColor: Color = SurfaceWhite,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     TopAppBar(

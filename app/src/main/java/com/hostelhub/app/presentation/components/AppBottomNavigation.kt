@@ -66,12 +66,12 @@ fun AppBottomNavigation(
     currentRoute: String?,
     onItemClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    activeColor: Color = PrimaryNavy,
-    indicatorColor: Color = PrimaryContainer
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    indicatorColor: Color = MaterialTheme.colorScheme.surface
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = SurfaceWhite,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         items.forEach { item ->

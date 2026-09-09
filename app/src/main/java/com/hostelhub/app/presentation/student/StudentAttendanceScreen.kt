@@ -16,9 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.hostelhub.app.domain.model.AttendanceRecord
 import com.hostelhub.app.domain.model.AttendanceStatus
 import com.hostelhub.app.presentation.components.*
-import com.hostelhub.app.presentation.theme.BackgroundCool
 import com.hostelhub.app.presentation.theme.PrimaryNavy
 import com.hostelhub.app.presentation.theme.SecondaryTeal
+import com.hostelhub.app.presentation.theme.StudentBackground
 import com.hostelhub.app.utils.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +68,7 @@ fun StudentAttendanceScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

@@ -30,3 +30,19 @@ enum class StudentStatus {
     INACTIVE,
     PENDING_APPROVAL
 }
+
+data class Roommate(
+    val studentId: String = "",
+    val fullName: String = "",
+    val rollNumber: String = "",
+    val course: String = "",
+    val yearOfStudy: String = "1",
+    val bedNumber: String = "A",
+    val phoneNumber: String = ""
+)
+
+data class MyRoomDetails(
+    val room: Room? = null,
+    val myBed: String? = null,
+    val roommates: List<Roommate> = emptyList()
+)

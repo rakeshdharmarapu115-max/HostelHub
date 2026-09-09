@@ -420,7 +420,7 @@ private fun AllocateStudentDialog(
                                 onClick = {
                                     selectedStudentFromList = s
                                     studentNameInput = s.fullName
-                                    studentIdInput = s.rollNumber.ifBlank { s.studentId }
+                                    studentIdInput = s.studentId.ifBlank { s.userId }.ifBlank { s.rollNumber }
                                 },
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isSelected) SecondaryTeal.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -475,7 +475,8 @@ private fun AllocateStudentDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val finalId = selectedStudentFromList?.studentId ?: studentIdInput.ifBlank { "STD-${System.currentTimeMillis() % 10000}" }
+                    val finalId = selectedStudentFromList?.studentId?.ifBlank { selectedStudentFromList?.userId }?.ifBlank { selectedStudentFromList?.rollNumber }
+                        ?: studentIdInput.ifBlank { "STD-${System.currentTimeMillis() % 10000}" }
                     val finalName = selectedStudentFromList?.fullName ?: studentNameInput.ifBlank { "Resident Student" }
                     onConfirm(finalId, finalName)
                 },

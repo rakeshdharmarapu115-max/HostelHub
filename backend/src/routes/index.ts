@@ -38,6 +38,8 @@ router.use('/announcements', announcementsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/storage', storageRoutes);
+router.use('/owner/payment', storageRoutes);
+router.use('/owner', storageRoutes);
 
 router.get('/health', (req, res) => {
   res.json({

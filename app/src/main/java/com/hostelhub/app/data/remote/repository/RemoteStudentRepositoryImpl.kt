@@ -101,9 +101,26 @@ class RemoteStudentRepositoryImpl @Inject constructor(
             val response = studentApi.generateStudentId()
             if (response.isSuccessful && response.body()?.data != null) {
                 val studentId = response.body()!!.data!!["studentId"] ?: ""
-                Resource.Success(studentId)
+                if (studentId.isNotBlank()) {
+                    Resource.Success(studentId)
+                } else {
+                    val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                    val rand = (1000..9999).random()
+                    Resource.Success("STU-$year-$rand")
+                }
             } else {
-                Resource.Error(response.body()?.message ?: "Failed to generate Student ID")
+                val errorMsg = try {
+                    val rawError = response.errorBody()?.string()
+                    if (!rawError.isNullOrBlank()) {
+                        val json = org.json.JSONObject(rawError)
+                        json.optString("message", json.optString("error", "Failed to generate Student ID"))
+                    } else {
+                        response.body()?.message ?: "Failed to generate Student ID"
+                    }
+                } catch (_: Exception) {
+                    "Failed to generate Student ID"
+                }
+                Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error generating Student ID")
@@ -112,6 +129,7 @@ class RemoteStudentRepositoryImpl @Inject constructor(
 
     override suspend fun createStudentByAdmin(student: Student, password: String): Resource<Student> = withContext(Dispatchers.IO) {
         try {
+            println("[ROOM DEBUG] SUBMITTING TO API: selectedRoomId=${student.roomId}, roomNumber=${student.roomNumber}, studentId=${student.rollNumber}")
             val payload = mapOf(
                 "fullName" to student.fullName,
                 "email" to student.email,
@@ -127,14 +145,38 @@ class RemoteStudentRepositoryImpl @Inject constructor(
                 "password" to password,
                 "hostelId" to (student.hostelId ?: ""),
                 "roomId" to (student.roomId ?: ""),
+                "roomNumber" to (student.roomNumber ?: ""),
                 "bedNumber" to (student.bedNumber ?: "")
             )
-            var response = studentApi.createStudentByAdmin(payload)
-            if (response.code() == 404) {
-                response = studentApi.createStudentDirect(payload)
-            }
+            val response = studentApi.createStudentByAdmin(payload)
             if (response.isSuccessful && response.body()?.data != null) {
-                Resource.Success(student)
+                val dataMap = response.body()!!.data!!
+                val studentMap = dataMap["student"] as? Map<*, *>
+                val resolvedStudent = if (studentMap != null) {
+                    Student(
+                        studentId = studentMap["studentId"]?.toString() ?: student.studentId,
+                        userId = studentMap["userId"]?.toString() ?: student.userId,
+                        fullName = studentMap["fullName"]?.toString() ?: student.fullName,
+                        rollNumber = studentMap["rollNumber"]?.toString() ?: student.rollNumber,
+                        email = studentMap["email"]?.toString() ?: student.email,
+                        collegeName = studentMap["collegeName"]?.toString() ?: student.collegeName,
+                        course = studentMap["course"]?.toString() ?: student.course,
+                        yearOfStudy = studentMap["yearOfStudy"]?.toString() ?: student.yearOfStudy,
+                        gender = studentMap["gender"]?.toString() ?: student.gender,
+                        permanentAddress = studentMap["permanentAddress"]?.toString() ?: student.permanentAddress,
+                        emergencyContactName = studentMap["emergencyContactName"]?.toString() ?: student.emergencyContactName,
+                        emergencyContactPhone = studentMap["emergencyContactPhone"]?.toString() ?: student.emergencyContactPhone,
+                        hostelId = studentMap["hostelId"]?.toString() ?: student.hostelId,
+                        hostelName = studentMap["hostelName"]?.toString() ?: student.hostelName,
+                        roomId = studentMap["roomId"]?.toString() ?: student.roomId,
+                        roomNumber = studentMap["roomNumber"]?.toString() ?: student.roomNumber,
+                        bedNumber = studentMap["bedNumber"]?.toString() ?: student.bedNumber,
+                        status = com.hostelhub.app.domain.model.StudentStatus.ACTIVE
+                    )
+                } else {
+                    student
+                }
+                Resource.Success(resolvedStudent)
             } else {
                 val errorMsg = try {
                     val rawError = response.errorBody()?.string()
@@ -191,6 +233,20 @@ class RemoteStudentRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Network error fetching student dashboard stats"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override fun getMyRoommates(): Flow<Resource<com.hostelhub.app.domain.model.MyRoomDetails>> = flow {
+        emit(Resource.Loading)
+        try {
+            val response = studentApi.getMyRoommates()
+            if (response.isSuccessful && response.body()?.data != null) {
+                emit(Resource.Success(response.body()!!.data!!.toDomain()))
+            } else {
+                emit(Resource.Error(response.body()?.message ?: "Failed to fetch room and roommates"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Network error fetching room and roommates"))
         }
     }.flowOn(Dispatchers.IO)
 }

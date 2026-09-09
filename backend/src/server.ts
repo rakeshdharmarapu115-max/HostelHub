@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import * as path from 'path';
 import { env } from './config/env';
 import { swaggerDocument } from './config/swagger';
 import apiRoutes from './routes';
@@ -23,6 +24,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve locally uploaded files (QR codes, receipts, avatars)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 if (env.nodeEnv !== 'test') {
   app.use(morgan('dev'));
@@ -48,6 +52,8 @@ app.get('/health', async (req, res) => {
   res.status(200).json({
     status: 'ok',
     service: 'HostelHub Backend',
+    version: '2.1.0',
+    qrUploadRouteVersion: 'payment-qr-v2',
     database: {
       status: dbStatus,
       latencyMs: dbLatencyMs
@@ -57,11 +63,13 @@ app.get('/health', async (req, res) => {
   });
 });
 
+
 // Swagger API Documentation
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Mount REST API Routes
 app.use('/api', apiRoutes);
+app.use('/', apiRoutes);
 
 // Centralized Error Handling
 app.use(errorHandler);

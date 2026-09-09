@@ -79,6 +79,9 @@ export class AuthService {
       });
 
       return createdUser;
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     const tokenPayload = {
@@ -461,6 +464,9 @@ export class AuthService {
       });
 
       return user;
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     const tokenPayload = {
@@ -589,6 +595,9 @@ export class AuthService {
         where: { userId: user.id },
         data: { revoked: true }
       });
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     return {

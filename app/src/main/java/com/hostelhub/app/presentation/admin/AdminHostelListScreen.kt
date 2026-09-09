@@ -315,6 +315,11 @@ fun AdminHostelListScreen(
                         )
                         HostelSpecRow("Base Monthly Rent", "₹${hostel.baseMonthlyRent.toInt()} / month")
                         HostelSpecRow("Caution Deposit", "₹${hostel.cautionDeposit.toInt()} (Refundable)")
+                        HostelSpecRow("Payment Account Status", hostel.paymentAccountStatus ?: "ACTIVE")
+                        HostelSpecRow("Payment QR Status", if (hostel.qrPaymentEnabled) "Configured & Active ✓" else if (!hostel.paymentQrUrl.isNullOrBlank()) "Paused" else "Not Configured")
+                        if (!hostel.upiId.isNullOrBlank()) {
+                            HostelSpecRow("Settlement UPI ID", hostel.upiId)
+                        }
                         HostelSpecRow("Gender Accommodation", hostel.genderType.name)
                         HostelSpecRow("Warden / Host Contact", if (hostel.contactPhone.isNotBlank()) hostel.contactPhone else "+91 98765 43210")
                         HostelSpecRow("Official Email", if (hostel.contactEmail.isNotBlank()) hostel.contactEmail else "warden@campus.edu")

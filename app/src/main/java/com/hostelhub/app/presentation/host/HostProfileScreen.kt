@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,7 @@ import com.hostelhub.app.utils.UiState
 fun HostProfileScreen(
     hostViewModel: HostViewModel? = null,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToPaymentSettings: () -> Unit = {},
     onLogout: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
@@ -355,6 +357,48 @@ fun HostProfileScreen(
                         }
                     }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Payment Settings & QR Shortcut
+            AppCard(
+                padding = 16.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToPaymentSettings() }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(PrimaryContainer, shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.QrCode2, contentDescription = null, tint = PrimaryNavy, modifier = Modifier.size(22.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Payment Settings & QR Code",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryNavy
+                            )
+                            Text(
+                                text = "Configure UPI VPA & official payment QR",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = PrimaryNavy)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

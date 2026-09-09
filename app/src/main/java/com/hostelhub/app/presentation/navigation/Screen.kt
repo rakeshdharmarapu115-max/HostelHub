@@ -40,6 +40,7 @@ sealed class Screen(val route: String) {
     data object HostFoodMenuAdmin : Screen("host_food_menu_admin")
     data object HostAttendance : Screen("host_attendance")
     data object HostAnnouncements : Screen("host_announcements")
+    data object HostPaymentSettings : Screen("host_payment_settings")
     data object HostProfile : Screen("host_profile")
 
     // Admin Flow

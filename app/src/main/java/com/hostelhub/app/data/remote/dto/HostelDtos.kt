@@ -29,6 +29,12 @@ data class HostelDto(
     @SerializedName("ratingCount") val ratingCount: Int = 0,
     @SerializedName("contactEmail") val contactEmail: String = "",
     @SerializedName("contactPhone") val contactPhone: String = "",
+    @SerializedName("paymentAccountId") val paymentAccountId: String? = null,
+    @SerializedName("paymentAccountStatus") val paymentAccountStatus: String = "ACTIVE",
+    @SerializedName("paymentQrUrl") val paymentQrUrl: String? = null,
+    @SerializedName("qrPaymentEnabled") val qrPaymentEnabled: Boolean = true,
+    @SerializedName("upiId") val upiId: String? = null,
+    @SerializedName("merchantName") val merchantName: String? = null,
     @SerializedName("distanceKm") val distanceKm: Double? = null,
     @SerializedName("availableBeds") val availableBeds: Int? = null,
     @SerializedName("createdAt") val createdAt: Long = System.currentTimeMillis(),
@@ -64,6 +70,12 @@ data class HostelDto(
             ratingCount = ratingCount,
             contactEmail = contactEmail,
             contactPhone = contactPhone,
+            paymentAccountId = paymentAccountId,
+            paymentAccountStatus = paymentAccountStatus,
+            paymentQrUrl = paymentQrUrl,
+            qrPaymentEnabled = qrPaymentEnabled,
+            upiId = upiId,
+            merchantName = merchantName,
             distanceKm = distanceKm,
             availableBeds = availableBeds,
             createdAt = createdAt,
@@ -71,6 +83,57 @@ data class HostelDto(
         )
     }
 }
+
+data class HostelPaymentConfigDto(
+    @SerializedName("hostelId") val hostelId: String = "",
+    @SerializedName("hostelName") val hostelName: String = "",
+    @SerializedName("hostId") val hostId: String = "",
+    @SerializedName("hostName") val hostName: String = "",
+    @SerializedName("hostContactPhone") val hostContactPhone: String = "",
+    @SerializedName("hostContactEmail") val hostContactEmail: String = "",
+    @SerializedName("paymentAccountId") val paymentAccountId: String? = null,
+    @SerializedName("paymentAccountStatus") val paymentAccountStatus: String = "ACTIVE",
+    @SerializedName("paymentQrUrl") val paymentQrUrl: String? = null,
+    @SerializedName("qrPaymentEnabled") val qrPaymentEnabled: Boolean = true,
+    @SerializedName("upiId") val upiId: String? = null,
+    @SerializedName("merchantName") val merchantName: String? = null,
+    @SerializedName("studentId") val studentId: String? = null,
+    @SerializedName("studentName") val studentName: String? = null,
+    @SerializedName("studentRollNumber") val studentRollNumber: String? = null,
+    @SerializedName("roomNumber") val roomNumber: String? = null,
+    @SerializedName("totalPendingDues") val totalPendingDues: Double = 0.0
+) {
+    fun toDomain(): com.hostelhub.app.domain.model.HostelPaymentConfig {
+        return com.hostelhub.app.domain.model.HostelPaymentConfig(
+            hostelId = hostelId,
+            hostelName = hostelName,
+            hostId = hostId,
+            hostName = hostName,
+            hostContactPhone = hostContactPhone,
+            hostContactEmail = hostContactEmail,
+            paymentAccountId = paymentAccountId,
+            paymentAccountStatus = paymentAccountStatus,
+            paymentQrUrl = paymentQrUrl,
+            qrPaymentEnabled = qrPaymentEnabled,
+            upiId = upiId,
+            merchantName = merchantName,
+            studentId = studentId,
+            studentName = studentName,
+            studentRollNumber = studentRollNumber,
+            roomNumber = roomNumber,
+            totalPendingDues = totalPendingDues
+        )
+    }
+}
+
+data class UpdatePaymentConfigRequestDto(
+    @SerializedName("paymentAccountId") val paymentAccountId: String? = null,
+    @SerializedName("paymentAccountStatus") val paymentAccountStatus: String? = null,
+    @SerializedName("paymentQrUrl") val paymentQrUrl: String? = null,
+    @SerializedName("qrPaymentEnabled") val qrPaymentEnabled: Boolean? = null,
+    @SerializedName("upiId") val upiId: String? = null,
+    @SerializedName("merchantName") val merchantName: String? = null
+)
 
 data class HostelReviewDto(
     @SerializedName("reviewId") val reviewId: String = "",

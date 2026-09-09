@@ -279,6 +279,47 @@ class DatabaseStudentRepositoryImpl @Inject constructor(
             Resource.Error("Student not found")
         }
     }
+
+    override fun getMyRoommates(): Flow<Resource<MyRoomDetails>> = flow {
+        emit(Resource.Loading)
+        try {
+            val allStudents = daos.getAllStudents()
+            val currentStudent = allStudents.firstOrNull()
+            if (currentStudent == null || (currentStudent.roomId.isNullOrBlank() && currentStudent.roomNumber.isNullOrBlank())) {
+                emit(Resource.Success(MyRoomDetails(room = null, myBed = null, roommates = emptyList())))
+                return@flow
+            }
+            val roommates = allStudents.filter {
+                it.studentId != currentStudent.studentId &&
+                ((!currentStudent.roomId.isNullOrBlank() && it.roomId == currentStudent.roomId) ||
+                 (!currentStudent.roomNumber.isNullOrBlank() && it.roomNumber == currentStudent.roomNumber))
+            }.map {
+                Roommate(
+                    studentId = it.studentId,
+                    fullName = it.fullName,
+                    rollNumber = it.rollNumber,
+                    course = it.course,
+                    yearOfStudy = it.yearOfStudy,
+                    bedNumber = it.bedNumber ?: "Assigned",
+                    phoneNumber = it.emergencyContactPhone
+                )
+            }
+            val room = Room(
+                roomId = currentStudent.roomId ?: "room_local",
+                hostelId = currentStudent.hostelId ?: "hostel_local",
+                roomNumber = currentStudent.roomNumber ?: "A-101",
+                floor = 1,
+                roomType = RoomType.DOUBLE,
+                totalCapacity = 2,
+                occupiedCount = roommates.size + 1,
+                monthlyRent = 7500.0,
+                amenities = listOf("WiFi", "Attached Bath")
+            )
+            emit(Resource.Success(MyRoomDetails(room = room, myBed = currentStudent.bedNumber ?: "1", roommates = roommates)))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to fetch room and roommates"))
+        }
+    }.flowOn(Dispatchers.IO)
 }
 
 @Singleton
@@ -662,6 +703,201 @@ class DatabaseFeePaymentRepositoryImpl @Inject constructor(
             Resource.Error(e.message ?: "Failed to create fee")
         }
     }
+
+    override fun getMyHostelPaymentConfig(): Flow<Resource<HostelPaymentConfig>> = flow {
+        emit(Resource.Loading)
+        try {
+            val hostel = daos.getAllHostels().firstOrNull() ?: Hostel(
+                hostelId = "hostel_001",
+                name = "Green Valley Residencies",
+                hostId = "host_001",
+                paymentAccountId = "acc_gv_987654",
+                paymentAccountStatus = "ACTIVE",
+                paymentQrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR",
+                qrPaymentEnabled = true,
+                upiId = "greenvalley.hostel@hdfcbank",
+                merchantName = "Green Valley Residencies"
+            )
+            val config = HostelPaymentConfig(
+                hostelId = hostel.hostelId,
+                hostelName = hostel.name,
+                hostId = hostel.hostId,
+                hostName = "Robert Vance",
+                hostContactPhone = hostel.contactPhone,
+                hostContactEmail = hostel.contactEmail,
+                paymentAccountId = hostel.paymentAccountId ?: "acc_gv_987654",
+                paymentAccountStatus = hostel.paymentAccountStatus,
+                paymentQrUrl = hostel.paymentQrUrl ?: "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR",
+                qrPaymentEnabled = hostel.qrPaymentEnabled,
+                upiId = hostel.upiId ?: "greenvalley.hostel@hdfcbank",
+                merchantName = hostel.merchantName ?: hostel.name,
+                studentId = "std_001",
+                studentName = "Alex Mercer",
+                studentRollNumber = "STD-2024-0042",
+                roomNumber = "A-204",
+                totalPendingDues = 8000.0
+            )
+            emit(Resource.Success(config))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to get payment configuration"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override fun getHostelPaymentConfig(hostelId: String): Flow<Resource<HostelPaymentConfig>> = flow {
+        emit(Resource.Loading)
+        try {
+            val hostel = daos.getHostelById(hostelId) ?: daos.getAllHostels().firstOrNull() ?: Hostel(
+                hostelId = hostelId,
+                name = "Green Valley Residencies",
+                hostId = "host_001",
+                paymentAccountId = "acc_gv_987654",
+                paymentAccountStatus = "ACTIVE",
+                paymentQrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR",
+                qrPaymentEnabled = true,
+                upiId = "greenvalley.hostel@hdfcbank",
+                merchantName = "Green Valley Residencies"
+            )
+            val config = HostelPaymentConfig(
+                hostelId = hostel.hostelId,
+                hostelName = hostel.name,
+                hostId = hostel.hostId,
+                hostName = "Robert Vance",
+                hostContactPhone = hostel.contactPhone,
+                hostContactEmail = hostel.contactEmail,
+                paymentAccountId = hostel.paymentAccountId ?: "acc_gv_987654",
+                paymentAccountStatus = hostel.paymentAccountStatus,
+                paymentQrUrl = hostel.paymentQrUrl ?: "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR",
+                qrPaymentEnabled = hostel.qrPaymentEnabled,
+                upiId = hostel.upiId ?: "greenvalley.hostel@hdfcbank",
+                merchantName = hostel.merchantName ?: hostel.name
+            )
+            emit(Resource.Success(config))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to fetch hostel payment config"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun updateHostelPaymentConfig(
+        hostelId: String,
+        paymentAccountId: String?,
+        paymentAccountStatus: String?,
+        paymentQrUrl: String?,
+        qrPaymentEnabled: Boolean?,
+        upiId: String?,
+        merchantName: String?
+    ): Resource<HostelPaymentConfig> = withContext(Dispatchers.IO) {
+        val hostel = daos.getHostelById(hostelId)
+        val updated = HostelPaymentConfig(
+            hostelId = hostelId,
+            hostelName = hostel?.name ?: "Green Valley Residencies",
+            hostId = hostel?.hostId ?: "host_001",
+            hostName = "Robert Vance",
+            paymentAccountId = paymentAccountId ?: hostel?.paymentAccountId ?: "acc_gv_987654",
+            paymentAccountStatus = paymentAccountStatus ?: hostel?.paymentAccountStatus ?: "ACTIVE",
+            paymentQrUrl = paymentQrUrl ?: hostel?.paymentQrUrl,
+            qrPaymentEnabled = qrPaymentEnabled ?: hostel?.qrPaymentEnabled ?: true,
+            upiId = upiId ?: hostel?.upiId ?: "greenvalley.hostel@hdfcbank",
+            merchantName = merchantName ?: hostel?.merchantName ?: "Green Valley Residencies"
+        )
+        Resource.Success(updated)
+    }
+
+    override suspend fun submitManualQrPayment(
+        feeId: String,
+        amountPaid: Double,
+        transactionReference: String,
+        remarks: String?,
+        receiptUrl: String?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        val payment = Payment(
+            paymentId = "pay_manual_${System.currentTimeMillis()}",
+            feeId = feeId,
+            studentId = "std_001",
+            studentName = "Alex Mercer",
+            feeTitle = "Hostel Fee",
+            hostelId = "hostel_001",
+            amountPaid = amountPaid,
+            paymentMethod = PaymentMethod.UPI,
+            paymentGateway = "MANUAL_QR",
+            transactionReference = transactionReference,
+            paymentDate = System.currentTimeMillis(),
+            receiptUrl = receiptUrl,
+            status = PaymentStatus.PENDING_VERIFICATION,
+            remarks = remarks ?: "Manual static QR payment submitted (Awaiting host verification)"
+        )
+        Resource.Success(payment)
+    }
+
+    override suspend fun verifyManualPayment(
+        paymentId: String,
+        approved: Boolean,
+        remarks: String?
+    ): Resource<Payment> = withContext(Dispatchers.IO) {
+        val payment = Payment(
+            paymentId = paymentId,
+            feeId = "fee_001",
+            studentId = "std_001",
+            studentName = "Alex Mercer",
+            feeTitle = "Hostel Fee",
+            hostelId = "hostel_001",
+            amountPaid = 8000.0,
+            paymentMethod = PaymentMethod.UPI,
+            paymentGateway = "MANUAL_QR",
+            transactionReference = "REF-${System.currentTimeMillis()}",
+            status = if (approved) PaymentStatus.SUCCESS else PaymentStatus.FAILED,
+            remarks = remarks ?: (if (approved) "Approved by host" else "Rejected by host")
+        )
+        Resource.Success(payment)
+    }
+
+    override fun getAdminPaymentOverview(): Flow<Resource<List<AdminPaymentOverviewItem>>> = flow {
+        emit(Resource.Loading)
+        try {
+            val list = listOf(
+                AdminPaymentOverviewItem(
+                    hostelId = "hostel_001",
+                    hostelName = "Green Valley Residencies",
+                    city = "Metro City",
+                    ownerId = "host_001",
+                    ownerName = "Robert Vance",
+                    ownerContact = "+91 98765 43210",
+                    ownerEmail = "warden@greenvalley.edu",
+                    paymentAccountId = "acc_gv_987654",
+                    paymentAccountStatus = "ACTIVE",
+                    qrConfigured = true,
+                    qrPaymentEnabled = true,
+                    paymentQrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dgreenvalley.hostel%40hdfcbank%26pn%3DGreen%2520Valley%2520Residencies%26cu%3DINR",
+                    upiId = "greenvalley.hostel@hdfcbank",
+                    merchantName = "Green Valley Residencies",
+                    totalCollections = 450000.0,
+                    successfulPaymentCount = 52,
+                    pendingVerificationCount = 2
+                ),
+                AdminPaymentOverviewItem(
+                    hostelId = "hostel_002",
+                    hostelName = "Sunrise Elite Hostel",
+                    city = "Metro City",
+                    ownerId = "host_002",
+                    ownerName = "Elena Rostova",
+                    ownerContact = "+91 98765 43211",
+                    ownerEmail = "warden@stjude.edu",
+                    paymentAccountId = "acc_se_123456",
+                    paymentAccountStatus = "ACTIVE",
+                    qrConfigured = true,
+                    qrPaymentEnabled = true,
+                    paymentQrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dsunrise.elite%40icici%26pn%3DSunrise%2520Elite%2520Hostel%26cu%3DINR",
+                    upiId = "sunrise.elite@icici",
+                    merchantName = "Sunrise Elite Hostel",
+                    totalCollections = 260000.0,
+                    successfulPaymentCount = 26,
+                    pendingVerificationCount = 0
+                )
+            )
+            emit(Resource.Success(list))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to get overview"))
+        }
+    }.flowOn(Dispatchers.IO)
 }
 
 @Singleton

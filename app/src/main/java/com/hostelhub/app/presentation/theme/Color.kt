@@ -2,113 +2,128 @@ package com.hostelhub.app.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Brand Colors (Deep Navy / Indigo)
-val PrimaryNavy = Color(0xFF1A237E)
-val PrimaryIndigo = Color(0xFF3F51B5)
-val PrimaryLight = Color(0xFFDEE0FF)
-val PrimaryContainer = Color(0xFFE9EDFF)
-val OnPrimary = Color(0xFFFFFFFF)
-val OnPrimaryContainer = Color(0xFF00105C)
+// ==========================================
+// HOSTELHUB DARK NAVY / SLATE DESIGN SYSTEM
+// ==========================================
 
-// Secondary Colors (Teal Accent)
-val SecondaryTeal = Color(0xFF00897B)
-val SecondaryDark = Color(0xFF006A60)
-val SecondaryContainer = Color(0xFF85F6E5)
-val OnSecondary = Color(0xFFFFFFFF)
-val OnSecondaryContainer = Color(0xFF007166)
+// 1. Core Page & Surface Colors
+val DarkNavyBackground = Color(0xFF0F172A)   // Page Canvas Background (#0F172A)
+val SurfaceCard = Color(0xFF1E293B)          // Elevated Card Surface (#1E293B)
+val SurfaceSecondary = Color(0xFF162235)     // Secondary Surface Container (#162235)
+val SurfaceCardBorder = Color(0xFF334155)    // Card & Component Border (#334155)
+val SurfaceContainer = Color(0xFF1E293B)
+val SurfaceContainerHigh = Color(0xFF24344D)
+val SurfaceVariant = Color(0xFF162235)
+val SurfaceWhite = Color(0xFF1E293B)         // Unified card surface
 
-// Tertiary / Accent Colors (Warm Amber / Gold)
-val TertiaryAmber = Color(0xFFF59E0B)
-val TertiaryDark = Color(0xFF603B00)
-val TertiaryContainer = Color(0xFFFFC988)
-val OnTertiary = Color(0xFFFFFFFF)
-val OnTertiaryContainer = Color(0xFF2A1700)
+// 2. High-Contrast Text Tokens
+val TextPrimary = Color(0xFFF8FAFC)          // Primary Text (#F8FAFC)
+val TextSecondary = Color(0xFFCBD5E1)        // Secondary Text (#CBD5E1)
+val TextMuted = Color(0xFF94A3B8)            // Muted Subtitle / Timestamp (#94A3B8)
+val OnBackground = Color(0xFFF8FAFC)
+val OnSurface = Color(0xFFF8FAFC)
+val OnSurfaceVariant = Color(0xFFCBD5E1)
 
-// Neutral & Background Colors (Clean Light Theme with High Contrast Text)
-val BackgroundCool = Color(0xFFF8FAFC)
-val SurfaceWhite = Color(0xFFFFFFFF)
-val SurfaceContainer = Color(0xFFF1F5F9)
-val SurfaceContainerHigh = Color(0xFFE2E8F0)
-val SurfaceVariant = Color(0xFFF1F5F9)
-val OnBackground = Color(0xFF0F172A)
-val OnSurface = Color(0xFF0F172A)
-val OnSurfaceVariant = Color(0xFF475569)
-
-// Outline & Borders
+// 3. Borders & Outlines
 val OutlineColor = Color(0xFF94A3B8)
-val OutlineVariant = Color(0xFFE2E8F0)
-val BorderSubtle = Color(0xFFE2E8F0)
+val OutlineVariant = Color(0xFF334155)
+val BorderSubtle = Color(0xFF334155)
 
-// Functional & Semantic Colors
-val StatusSuccess = Color(0xFF16A34A)
-val StatusSuccessBg = Color(0xFFDCFCE7)
-val StatusWarning = Color(0xFFD97706)
-val StatusWarningBg = Color(0xFFFEF3C7)
-val StatusError = Color(0xFFDC2626)
-val StatusErrorBg = Color(0xFFFEE2E2)
-val StatusInfo = Color(0xFF2563EB)
-val StatusInfoBg = Color(0xFFDBEAFE)
+// 4. Primary Brand Accents (Vibrant Blue / Indigo)
+val PrimaryNavy = Color(0xFF38BDF8)          // Vibrant Sky Blue
+val PrimaryIndigo = Color(0xFF60A5FA)        // Vibrant Blue
+val PrimaryLight = Color(0xFF1E3A8A)
+val PrimaryContainer = Color(0xFF1E3A8A)     // Dark Blue Container
+val OnPrimary = Color(0xFF0B132B)
+val OnPrimaryContainer = Color(0xFFDBEAFE)
+
+// 5. Secondary Accents (Vibrant Teal)
+val SecondaryTeal = Color(0xFF2DD4BF)        // Radiant Teal
+val SecondaryDark = Color(0xFF0D9488)
+val SecondaryContainer = Color(0xFF0F766E)   // Dark Teal Container
+val OnSecondary = Color(0xFF0B132B)
+val OnSecondaryContainer = Color(0xFFCCFBF1)
+
+// 6. Tertiary Accents (Warm Gold / Amber)
+val TertiaryAmber = Color(0xFFFBBF24)        // Warm Amber
+val TertiaryDark = Color(0xFFD97706)
+val TertiaryContainer = Color(0xFF78350F)    // Dark Amber Container
+val OnTertiary = Color(0xFF0B132B)
+val OnTertiaryContainer = Color(0xFFFEF3C7)
+
+// 7. Neutral Canvas Background Aliases
+val BackgroundCool = DarkNavyBackground
+val StudentBackground = DarkNavyBackground
+val HostBackground = DarkNavyBackground
+val AdminBackground = DarkNavyBackground
+
+// 8. Functional & Semantic Status Colors
+val StatusSuccess = Color(0xFF4ADE80)        // Vibrant Emerald Green
+val StatusSuccessBg = Color(0xFF064E3B)      // Dark Green Container
+val StatusWarning = Color(0xFFFBBF24)        // Vibrant Amber
+val StatusWarningBg = Color(0xFF78350F)      // Dark Amber Container
+val StatusError = Color(0xFFF87171)          // Vibrant Coral Red
+val StatusErrorBg = Color(0xFF7F1D1D)        // Dark Red Container
+val StatusInfo = Color(0xFF38BDF8)           // Vibrant Sky Blue
+val StatusInfoBg = Color(0xFF0C4A6E)         // Dark Blue Container
 
 // ==========================================
-// DISTINCT DASHBOARD THEMED COLOR PALETTES
+// DISTINCT HERO & ROLE PALETTES
 // ==========================================
 
-// 1. Student Dashboard (Ocean Blue & Modern Azure Theme)
+// Student Hero
 val StudentHeroBg = Color(0xFF0369A1)
 val StudentHeroGradientEnd = Color(0xFF0284C7)
-val StudentAccent = Color(0xFF0284C7)
-val StudentAccentContainer = Color(0xFFE0F2FE)
-val StudentOnAccentContainer = Color(0xFF0369A1)
-val StudentBackground = Color(0xFFF0F7FF)
-val StudentCardBg = Color(0xFFFFFFFF)
-val StudentBadgeBg = Color(0xFFE0F2FE)
-val StudentBadgeText = Color(0xFF0284C7)
+val StudentAccent = Color(0xFF38BDF8)
+val StudentAccentContainer = Color(0xFF0C4A6E)
+val StudentOnAccentContainer = Color(0xFFBAE6FD)
+val StudentCardBg = SurfaceCard
+val StudentBadgeBg = Color(0xFF0C4A6E)
+val StudentBadgeText = Color(0xFF38BDF8)
 
-// 2. Hostel Owner / Host Dashboard (Emerald Green & Forest Gold Theme)
+// Hostel Owner / Host Hero
 val HostHeroBg = Color(0xFF065F46)
 val HostHeroGradientEnd = Color(0xFF059669)
-val HostAccent = Color(0xFF059669)
-val HostAccentContainer = Color(0xFFD1FAE5)
-val HostOnAccentContainer = Color(0xFF047857)
-val HostBackground = Color(0xFFF0FDF4)
-val HostCardBg = Color(0xFFFFFFFF)
-val HostBadgeBg = Color(0xFFDCFCE7)
-val HostBadgeText = Color(0xFF15803D)
+val HostAccent = Color(0xFF34D399)
+val HostAccentContainer = Color(0xFF064E3B)
+val HostOnAccentContainer = Color(0xFFA7F3D0)
+val HostCardBg = SurfaceCard
+val HostBadgeBg = Color(0xFF064E3B)
+val HostBadgeText = Color(0xFF34D399)
 
-// 3. Associative Head / Admin Dashboard (Royal Purple & Midnight Amethyst Theme)
+// Associative Head / Admin Hero
 val AdminHeroBg = Color(0xFF581C87)
 val AdminHeroGradientEnd = Color(0xFF7C3AED)
-val AdminAccent = Color(0xFF7C3AED)
-val AdminAccentContainer = Color(0xFFEDE9FE)
-val AdminOnAccentContainer = Color(0xFF6D28D9)
-val AdminBackground = Color(0xFFFAF5FF)
-val AdminCardBg = Color(0xFFFFFFFF)
-val AdminBadgeBg = Color(0xFFF3E8FF)
-val AdminBadgeText = Color(0xFF7C3AED)
+val AdminAccent = Color(0xFFC084FC)
+val AdminAccentContainer = Color(0xFF3B0764)
+val AdminOnAccentContainer = Color(0xFFE9D5FF)
+val AdminCardBg = SurfaceCard
+val AdminBadgeBg = Color(0xFF3B0764)
+val AdminBadgeText = Color(0xFFC084FC)
 
-// Dark Theme Overrides
-val PrimaryNavyDark = Color(0xFF1E3A8A)
-val SecondaryTealDark = Color(0xFF0D9488)
-val BackgroundDark = Color(0xFFF8FAFC)
-val SurfaceDark = Color(0xFFFFFFFF)
-val SurfaceVariantDark = Color(0xFFF1F5F9)
-val OnBackgroundDark = Color(0xFF0F172A)
-val OnSurfaceDark = Color(0xFF0F172A)
-val OnSurfaceVariantDark = Color(0xFF475569)
+// Dark Theme Overrides (kept consistent)
+val PrimaryNavyDark = Color(0xFF60A5FA)
+val SecondaryTealDark = Color(0xFF2DD4BF)
+val BackgroundDark = DarkNavyBackground
+val SurfaceDark = SurfaceCard
+val SurfaceVariantDark = SurfaceSecondary
+val OnBackgroundDark = TextPrimary
+val OnSurfaceDark = TextPrimary
+val OnSurfaceVariantDark = TextSecondary
 
-// Colorful Vibrant Badges & Accents (with guaranteed high-contrast visible text)
-val ColorTagCyan = Color(0xFF0284C7)
-val ColorTagCyanBg = Color(0xFFE0F2FE)
-val ColorTagGreen = Color(0xFF16A34A)
-val ColorTagGreenBg = Color(0xFFDCFCE7)
-val ColorTagPurple = Color(0xFF7C3AED)
-val ColorTagPurpleBg = Color(0xFFEDE9FE)
-val ColorTagAmber = Color(0xFFD97706)
-val ColorTagAmberBg = Color(0xFFFEF3C7)
-val ColorTagRose = Color(0xFFE11D48)
-val ColorTagRoseBg = Color(0xFFFFE4E6)
-val ColorTagIndigo = Color(0xFF4F46E5)
-val ColorTagIndigoBg = Color(0xFFEEF2FF)
+// Colorful Vibrant Badges & Accents (Dark-Theme High-Contrast)
+val ColorTagCyan = Color(0xFF38BDF8)
+val ColorTagCyanBg = Color(0xFF0C4A6E)
+val ColorTagGreen = Color(0xFF4ADE80)
+val ColorTagGreenBg = Color(0xFF064E3B)
+val ColorTagPurple = Color(0xFFC084FC)
+val ColorTagPurpleBg = Color(0xFF3B0764)
+val ColorTagAmber = Color(0xFFFBBF24)
+val ColorTagAmberBg = Color(0xFF78350F)
+val ColorTagRose = Color(0xFFFB7185)
+val ColorTagRoseBg = Color(0xFF881337)
+val ColorTagIndigo = Color(0xFF818CF8)
+val ColorTagIndigoBg = Color(0xFF312E81)
 
 val VibrantAccents = listOf(
     Pair(ColorTagCyan, ColorTagCyanBg),

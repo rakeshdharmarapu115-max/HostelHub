@@ -63,7 +63,24 @@ export enum PaymentMethodEnum {
 export enum PaymentStatusEnum {
   SUCCESS = 'SUCCESS',
   PENDING = 'PENDING',
-  FAILED = 'FAILED'
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum PaymentGatewayEnum {
+  RAZORPAY = 'RAZORPAY',
+  MANUAL_QR = 'MANUAL_QR',
+  UPI_INTENT = 'UPI_INTENT',
+  CASH = 'CASH',
+  BANK_TRANSFER = 'BANK_TRANSFER'
+}
+
+export enum PaymentAccountStatusEnum {
+  ACTIVE = 'ACTIVE',
+  PENDING = 'PENDING',
+  DISABLED = 'DISABLED',
+  NOT_CONFIGURED = 'NOT_CONFIGURED'
 }
 
 export enum ComplaintCategoryEnum {

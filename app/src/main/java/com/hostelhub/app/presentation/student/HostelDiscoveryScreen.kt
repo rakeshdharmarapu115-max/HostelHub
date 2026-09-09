@@ -129,7 +129,7 @@ fun HostelDiscoveryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundCool)
+                .background(StudentBackground)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
@@ -327,7 +327,8 @@ fun HostelDiscoveryScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val image = selectedHostel.images.firstOrNull()
+                                val rawImage = selectedHostel.images.firstOrNull()
+                                val image = studentViewModel?.resolveImageUrl(rawImage) ?: rawImage
                                 if (!image.isNullOrBlank()) {
                                     AsyncImage(
                                         model = image,
@@ -434,7 +435,8 @@ fun HostelDiscoveryScreen(
                                         .height(170.dp)
                                         .background(PrimaryNavy)
                                 ) {
-                                    val coverImage = hostel.images.firstOrNull()
+                                    val rawCoverImage = hostel.images.firstOrNull()
+                                    val coverImage = studentViewModel?.resolveImageUrl(rawCoverImage) ?: rawCoverImage
                                     if (!coverImage.isNullOrBlank()) {
                                         AsyncImage(
                                             model = coverImage,

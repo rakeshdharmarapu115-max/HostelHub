@@ -18,6 +18,7 @@ export class RoomsService {
       orderBy: { roomNumber: 'asc' }
     });
 
+    console.log('[ROOM DEBUG] API ROOMS for hostel:', hostelId, rooms.map(r => ({ id: r.id, roomNumber: r.roomNumber, hostelId: r.hostelId })));
     return rooms.map(r => this.mapRoom(r));
   }
 
@@ -121,6 +122,9 @@ export class RoomsService {
         where: { id: room.id },
         include: { beds: true }
       });
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     return this.mapRoom(created);
@@ -164,6 +168,9 @@ export class RoomsService {
       }
       await tx.bed.deleteMany({ where: { roomId: id } });
       await tx.room.delete({ where: { id } });
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     return { success: true };
@@ -204,6 +211,9 @@ export class RoomsService {
       }
 
       return b;
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     return this.mapBed(bed);
@@ -227,19 +237,24 @@ export class RoomsService {
         }
       }
       await tx.bed.delete({ where: { id } });
+    }, {
+      maxWait: 10000,
+      timeout: 25000
     });
 
     return { success: true };
   }
 
   private mapRoom(r: any) {
-    let parsedAmenities: string[] = [];
+    if (!r) return null;
+    let parsedAmenities = [];
     try {
       parsedAmenities = typeof r.amenities === 'string' ? JSON.parse(r.amenities) : (r.amenities || []);
     } catch {
       parsedAmenities = [];
     }
     return {
+      id: r.id,
       roomId: r.id,
       hostelId: r.hostelId,
       roomNumber: r.roomNumber,

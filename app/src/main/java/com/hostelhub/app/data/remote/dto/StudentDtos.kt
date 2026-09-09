@@ -52,3 +52,35 @@ data class StudentDto(
         )
     }
 }
+
+data class RoommateDto(
+    @SerializedName("studentId") val studentId: String = "",
+    @SerializedName("fullName") val fullName: String = "",
+    @SerializedName("rollNumber") val rollNumber: String = "",
+    @SerializedName("course") val course: String = "",
+    @SerializedName("yearOfStudy") val yearOfStudy: String = "1",
+    @SerializedName("bedNumber") val bedNumber: String = "A",
+    @SerializedName("phoneNumber") val phoneNumber: String = ""
+) {
+    fun toDomain() = com.hostelhub.app.domain.model.Roommate(
+        studentId = studentId,
+        fullName = fullName,
+        rollNumber = rollNumber,
+        course = course,
+        yearOfStudy = yearOfStudy,
+        bedNumber = bedNumber,
+        phoneNumber = phoneNumber
+    )
+}
+
+data class MyRoomResponseDto(
+    @SerializedName("room") val room: RoomDto? = null,
+    @SerializedName("myBed") val myBed: String? = null,
+    @SerializedName("roommates") val roommates: List<RoommateDto> = emptyList()
+) {
+    fun toDomain() = com.hostelhub.app.domain.model.MyRoomDetails(
+        room = room?.toDomain(),
+        myBed = myBed,
+        roommates = roommates.map { it.toDomain() }
+    )
+}

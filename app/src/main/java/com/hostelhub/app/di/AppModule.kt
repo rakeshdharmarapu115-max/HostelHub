@@ -51,4 +51,8 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(impl: RemoteNotificationRepositoryImpl): NotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStorageRepository(impl: RemoteStorageRepositoryImpl): StorageRepository
 }

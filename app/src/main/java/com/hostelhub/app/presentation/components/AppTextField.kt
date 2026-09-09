@@ -118,18 +118,18 @@ fun AppTextField(
             keyboardActions = keyboardActions,
             shape = InputFieldShape,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceWhite,
-                unfocusedContainerColor = SurfaceWhite,
-                disabledContainerColor = SurfaceVariant.copy(alpha = 0.5f),
-                errorContainerColor = SurfaceWhite,
-                focusedBorderColor = PrimaryNavy,
-                unfocusedBorderColor = OutlineColor.copy(alpha = 0.4f),
-                errorBorderColor = StatusError,
-                cursorColor = PrimaryNavy,
-                focusedTextColor = OnSurface,
-                unfocusedTextColor = OnSurface,
-                focusedPlaceholderColor = OutlineColor,
-                unfocusedPlaceholderColor = OutlineColor
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                errorContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                errorBorderColor = MaterialTheme.colorScheme.error,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         )
         if (isError) {

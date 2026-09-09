@@ -123,7 +123,18 @@ class RemoteRoomRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 Resource.Success(Unit)
             } else {
-                Resource.Error(response.body()?.message ?: "Failed to allocate bed")
+                val errorMsg = try {
+                    val rawError = response.errorBody()?.string()
+                    if (!rawError.isNullOrBlank()) {
+                        val json = org.json.JSONObject(rawError)
+                        json.optString("message", json.optString("error", "Failed to allocate bed (HTTP ${response.code()})"))
+                    } else {
+                        response.body()?.message ?: "Failed to allocate bed (HTTP ${response.code()})"
+                    }
+                } catch (_: Exception) {
+                    "Failed to allocate bed (HTTP ${response.code()})"
+                }
+                Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error allocating bed")
@@ -141,7 +152,18 @@ class RemoteRoomRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 Resource.Success(Unit)
             } else {
-                Resource.Error(response.body()?.message ?: "Failed to vacate bed")
+                val errorMsg = try {
+                    val rawError = response.errorBody()?.string()
+                    if (!rawError.isNullOrBlank()) {
+                        val json = org.json.JSONObject(rawError)
+                        json.optString("message", json.optString("error", "Failed to vacate bed (HTTP ${response.code()})"))
+                    } else {
+                        response.body()?.message ?: "Failed to vacate bed (HTTP ${response.code()})"
+                    }
+                } catch (_: Exception) {
+                    "Failed to vacate bed (HTTP ${response.code()})"
+                }
+                Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error vacating bed")

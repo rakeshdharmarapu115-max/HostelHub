@@ -56,6 +56,9 @@ data class PaymentDto(
     @SerializedName("hostelId") val hostelId: String = "",
     @SerializedName("amountPaid") val amountPaid: Double = 0.0,
     @SerializedName("paymentMethod") val paymentMethod: String = "UPI",
+    @SerializedName("paymentGateway") val paymentGateway: String = "RAZORPAY",
+    @SerializedName("orderId") val orderId: String? = null,
+    @SerializedName("transactionId") val transactionId: String? = null,
     @SerializedName("transactionReference") val transactionReference: String = "",
     @SerializedName("razorpayOrderId") val razorpayOrderId: String? = null,
     @SerializedName("razorpayPaymentId") val razorpayPaymentId: String? = null,
@@ -81,10 +84,17 @@ data class PaymentDto(
             paymentId = paymentId,
             feeId = feeId,
             studentId = studentId,
+            studentName = studentName,
+            feeTitle = feeTitle,
             hostelId = hostelId,
             amountPaid = amountPaid,
             paymentMethod = pMethod,
+            paymentGateway = paymentGateway,
+            orderId = orderId,
+            transactionId = transactionId,
             transactionReference = transactionReference,
+            razorpayOrderId = razorpayOrderId,
+            razorpayPaymentId = razorpayPaymentId,
             paymentDate = paymentDate,
             receiptUrl = receiptUrl,
             status = pStatus,
@@ -151,3 +161,58 @@ data class RecordPaymentRequestDto(
     @SerializedName("transactionReference") val transactionReference: String? = null,
     @SerializedName("remarks") val remarks: String? = null
 )
+
+data class ManualPaymentSubmissionRequestDto(
+    @SerializedName("feeId") val feeId: String,
+    @SerializedName("amountPaid") val amountPaid: Double,
+    @SerializedName("transactionReference") val transactionReference: String,
+    @SerializedName("remarks") val remarks: String? = null,
+    @SerializedName("receiptUrl") val receiptUrl: String? = null
+)
+
+data class VerifyManualPaymentRequestDto(
+    @SerializedName("approved") val approved: Boolean,
+    @SerializedName("remarks") val remarks: String? = null
+)
+
+data class AdminPaymentOverviewDto(
+    @SerializedName("hostelId") val hostelId: String = "",
+    @SerializedName("hostelName") val hostelName: String = "",
+    @SerializedName("city") val city: String = "",
+    @SerializedName("ownerId") val ownerId: String = "",
+    @SerializedName("ownerName") val ownerName: String = "",
+    @SerializedName("ownerContact") val ownerContact: String = "",
+    @SerializedName("ownerEmail") val ownerEmail: String = "",
+    @SerializedName("paymentAccountId") val paymentAccountId: String? = null,
+    @SerializedName("paymentAccountStatus") val paymentAccountStatus: String = "ACTIVE",
+    @SerializedName("qrConfigured") val qrConfigured: Boolean = false,
+    @SerializedName("qrPaymentEnabled") val qrPaymentEnabled: Boolean = true,
+    @SerializedName("paymentQrUrl") val paymentQrUrl: String? = null,
+    @SerializedName("upiId") val upiId: String? = null,
+    @SerializedName("merchantName") val merchantName: String = "",
+    @SerializedName("totalCollections") val totalCollections: Double = 0.0,
+    @SerializedName("successfulPaymentCount") val successfulPaymentCount: Int = 0,
+    @SerializedName("pendingVerificationCount") val pendingVerificationCount: Int = 0
+) {
+    fun toDomain(): AdminPaymentOverviewItem {
+        return AdminPaymentOverviewItem(
+            hostelId = hostelId,
+            hostelName = hostelName,
+            city = city,
+            ownerId = ownerId,
+            ownerName = ownerName,
+            ownerContact = ownerContact,
+            ownerEmail = ownerEmail,
+            paymentAccountId = paymentAccountId,
+            paymentAccountStatus = paymentAccountStatus,
+            qrConfigured = qrConfigured,
+            qrPaymentEnabled = qrPaymentEnabled,
+            paymentQrUrl = paymentQrUrl,
+            upiId = upiId,
+            merchantName = merchantName,
+            totalCollections = totalCollections,
+            successfulPaymentCount = successfulPaymentCount,
+            pendingVerificationCount = pendingVerificationCount
+        )
+    }
+}
